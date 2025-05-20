@@ -1,0 +1,211 @@
+zabbix_export:
+  version: '7.0'
+  media_types:
+    - name: WHMCS
+      type: WEBHOOK
+      parameters:
+        - name: event_value
+          value: '{EVENT.VALUE}'
+        - name: trigger_value
+          value: '{TRIGGER.VALUE}'
+        - name: whmcs_admin_username
+          value: '<PLACE WHMCS ADMIN Username>'
+        - name: whmcs_apiIdentifier
+          value: '<PLACE WHMCS API IDENTIFIER>'
+        - name: whmcs_apiSecret
+          value: '<PLACE WHMCS API SECRET>'
+        - name: whmcs_clientId
+          value: '{ALERT.SENDTO}'
+        - name: whmcs_departmentId
+          value: '<PLACE WHMCS departmentid>'
+        - name: whmcs_message
+          value: '{ALERT.MESSAGE}'
+        - name: whmcs_path_admin
+          value: '<PLACE WHMCS ADMIN PATH>'
+        - name: whmcs_problem_id
+          value: '{EVENT.TAGS.__zbx_whmcs_ticket_id}'
+        - name: whmcs_subject
+          value: '{ALERT.SUBJECT}'
+        - name: whmcs_url
+          value: '<PLACE WHMCS URL>'
+      script: |
+        function WHMCSRequest(action, params) {
+            var request = new HttpRequest();
+            var postData = {
+                action: action,
+                username: params.apiIdentifier,
+                password: params.apiSecret,
+                markdown: true,
+                responsetype: 'json'
+            };
+        
+            // Variable action
+            if (action === 'OpenTicket') {
+                postData.action = 'OpenTicket';
+                postData.subject = params.subject;
+                postData.message = params.message;
+                postData.clientid = params.clientId;
+                postData.deptid = params.departmentId;
+                postData.admin = true;
+                postData.adminusername = params.whmcs_admin_username;
+                postData.cc = params.whmcs_client_user;
+            } else if (action === 'AddTicketReply') {
+                postData.message = params.message;
+                postData.ticketid = params.ticketId;
+                postData.adminusername = params.whmcs_admin_username;
+                postData.cc = params.whmcs_client_user;
+            } else if (action === 'UpdateTicket') {
+                postData.ticketid = params.ticketId;
+                postData.status = 'Closed';
+            }
+        
+            request.addHeader('Content-Type', 'application/x-www-form-urlencoded');
+            request.addHeader('Accept', 'application/json');
+        
+            Zabbix.log(4, '[ WHMCSMode Webhook ] Sending request for ' + action + '.');
+            var response = request.post(params.url + '/includes/api.php', serialize(postData));
+            Zabbix.log(4, '[ WHMCSMode Webhook ] Received response with status code ' + request.getStatus() + '\n' + response);
+        
+            if (request.getStatus() < 200 || request.getStatus() >= 300) {
+                throw new Error('Request failed with status code ' + request.getStatus() + ': ' + response);
+            }
+        
+            return JSON.parse(response);
+        }
+        
+        function serialize(data) {
+            return Object.keys(data)
+                .map(function(key) {
+                    return encodeURIComponent(key) + "=" + encodeURIComponent(data[key]);
+                })
+                .join("&");
+        }
+        
+        function checkClientId(params) {
+            var clientIdParts = params.whmcs_clientId.split(';');
+            if (clientIdParts.length > 1) {
+                params.whmcs_clientId = clientIdParts[0].trim();
+                params.whmcs_client_user = clientIdParts[1].trim();
+            } else {
+                params.whmcs_client_user = null;
+            }
+            return params;
+        }
+        
+        try {
+            var params = JSON.parse(value);
+            var result = { tags: {} };
+        
+            // Check param
+            if (!params.whmcs_url || !params.whmcs_subject || !params.whmcs_message || !params.whmcs_clientId || !params.whmcs_departmentId || !params.whmcs_apiIdentifier || !params.whmcs_apiSecret) {
+                throw new Error('Required parameters are not set.');
+            }
+        
+        
+            params = checkClientId(params);
+        
+            // Trigger alert => OpenTicket
+            if (params.event_value === '1' && params.trigger_value == '1') {
+                    var response = WHMCSRequest('OpenTicket', {
+                        url: params.whmcs_url,
+                        subject: params.whmcs_subject,
+                        message: params.whmcs_message,
+                        clientId: params.whmcs_clientId,
+                        departmentId: params.whmcs_departmentId,
+                        apiIdentifier: params.whmcs_apiIdentifier,
+                        apiSecret: params.whmcs_apiSecret,
+                        whmcs_admin_name: params.whmcs_admin_name,
+                        whmcs_client_user: params.whmcs_client_user
+                    });
+        
+                    result.tags.__zbx_whmcs_ticket_id = response.id;
+                    result.tags.__zbx_whmcs_link = params.whmcs_url + '/' + params.whmcs_path_admin + 'supporttickets.php?action=view&id=' + response.id;
+                    Zabbix.log(4, '[ WHMCSMode Webhook ] Result: ' + JSON.stringify(result));
+        
+                    return JSON.stringify(result);
+            }
+        
+            // Trigger resolv => ClosedTicket
+            if (params.event_value === '0' && params.trigger_value == '0') {
+                WHMCSRequest('AddTicketReply', {
+                    url: params.whmcs_url,
+                    message: params.whmcs_message,
+                    ticketId: params.whmcs_problem_id,
+                    apiIdentifier: params.whmcs_apiIdentifier,
+                    apiSecret: params.whmcs_apiSecret,
+                    whmcs_admin_username: params.whmcs_admin_username,
+                    whmcs_client_user: params.whmcs_client_user
+                });
+                WHMCSRequest('UpdateTicket', {
+                    url: params.whmcs_url,
+                    ticketId: params.whmcs_problem_id,
+                    apiIdentifier: params.whmcs_apiIdentifier,
+                    apiSecret: params.whmcs_apiSecret,
+                    whmcs_admin_username: params.whmcs_admin_username,
+                    whmcs_client_user: params.whmcs_client_user
+        
+                });
+                Zabbix.log(4, '[ WHMCSMode Webhook ] Ticket closed.');
+                return JSON.stringify(result);
+            }
+        
+        } catch (error) {
+            Zabbix.log(3, '[ WHMCSMode Webhook ] ERROR: ' + error.message);
+            throw new Error('Sending failed: ' + error.message);
+        }
+      process_tags: 'YES'
+      show_event_menu: 'YES'
+      event_menu_url: '{EVENT.TAGS.__zbx_whmcs_link}'
+      event_menu_name: 'WHMCSi: Problem {EVENT.TAGS.__zbx_whmcs_problem_id}'
+      message_templates:
+        - event_source: TRIGGERS
+          operation_mode: PROBLEM
+          subject: 'Problem: {EVENT.NAME}'
+          message: |
+            # Notification Supervision
+            
+            --- 
+            
+            Nous souhaitons vous informer qu'une alerte a été déclenchée sur votre serveur : {HOST.NAME}
+            
+            L'alerte est la suivante : {EVENT.NAME}
+            
+            Vous trouverez ci-dessous les détails de l'alerte :
+            
+            
+            | Description | Détails |
+            |  --- | --- |
+            | Problem started  | {EVENT.DATE} {EVENT.TIME} |
+            | Problem name: | {EVENT.NAME} |
+            | Host:  | {HOST.NAME} |
+            | Host IP:  | {HOST.IP} |
+            | Severity | {EVENT.SEVERITY} |
+            | Operational data: | {EVENT.OPDATA} |
+            | Original problem ID | {EVENT.ID} |
+            | {TRIGGER.URL} |
+            
+            Cette alerte a été générée dans le cadre de notre surveillance proactive afin d'assurer la performance et la sécurité de nos services.
+            
+            N'hésitez pas à nous contacter si vous avez besoin de plus d'informations.
+        - event_source: TRIGGERS
+          operation_mode: RECOVERY
+          subject: 'Resolved in {EVENT.DURATION}: {EVENT.NAME}'
+          message: |
+            Nous avons le plaisir de vous informer que l'alerte précédemment déclenchée sur votre serveur : {HOST.NAME} est résolue.         
+            
+            L'alerte concernait : {EVENT.NAME}
+            
+            Vous trouverez ci-dessous les détails de la résolution :
+            
+            | Description  | Détails  |
+            |  --- | --- |
+            | Problem has been resolved | at {EVENT.RECOVERY.TIME} on {EVENT.RECOVERY.DATE} |
+            | Problem name: | {EVENT.NAME} |
+            | Problem duration: | {EVENT.DURATION} |
+            | Host: |  {HOST.NAME} |
+            | Host IP:  | {HOST.IP} |
+            | Severity: | {EVENT.SEVERITY} |
+            | Original problem ID: {EVENT.ID} |
+            
+            
+            N'hésitez pas à nous contacter si vous avez besoin de plus d'informations.
