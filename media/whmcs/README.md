@@ -1,0 +1,1 @@
+# Zabbix WHMCS Media type
