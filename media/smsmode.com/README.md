@@ -1,0 +1,1 @@
+# Zabbix smsmode media type
