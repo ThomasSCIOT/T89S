@@ -5,8 +5,8 @@
 - This template is designed to monitor smsmode.com account
 - It works without any external scripts and uses the HTTP agent item.
 
+![image](https://github.com/user-attachments/assets/dfe347de-b390-434c-8009-ae427f1c567c)
 
-![]()
 
 ## Requirements
 
