@@ -1,0 +1,91 @@
+zabbix_export:
+  version: '7.0'
+  media_types:
+    - name: smsmode.com
+      type: WEBHOOK
+      parameters:
+        - name: apikey
+        - name: message
+          value: '{ALERT.MESSAGE}'
+        - name: send_to
+          value: '{ALERT.SENDTO}'
+      script: |
+        var SMSMode = {
+            params: {},
+        
+            setPayload: function (recipient, message, apikey) {
+                this.params.recipient = recipient;
+                this.params.message = message;
+                this.params.apikey = apikey;
+            },
+        
+            request: function () {
+                var response,
+                    request = new HttpRequest(),
+                    data = JSON.stringify({
+                        recipient: {
+                            to: this.params.recipient
+                        },
+                        body: {
+                            text: this.params.message
+                        }
+                    });
+        
+                request.addHeader('Content-Type: application/json');
+                request.addHeader('X-Api-Key: ' + this.params.apikey);
+                request.addHeader('Accept: application/json');
+        
+                Zabbix.log(4, '[ SMSMode Webhook ] Sending request.');
+        
+                response = request.post('https://rest.smsmode.com/sms/v1/messages', data);
+        
+                Zabbix.log(4, '[ SMSMode Webhook ] Received response with status code ' +
+                    request.getStatus() + '\n' + response);
+        
+                if (request.getStatus() < 200 || request.getStatus() >= 300) {
+                    var message = 'Request failed with status code ' + request.getStatus();
+        
+                    if (response) {
+                        message += ': ' + response;
+                    }
+        
+                    throw message + '. Check debug log for more information.';
+                }
+            }
+        };
+        
+        try {
+            var params = JSON.parse(value);
+        
+            if (!params.send_to || !params.message || !params.apikey) {
+                throw 'Required parameters are not set.';
+            }
+        
+            SMSMode.setPayload(params.send_to, params.message, params.apikey);
+            SMSMode.request();
+        
+            return 'OK';
+        }
+        catch (error) {
+            Zabbix.log(3, '[ SMSMode Webhook ] ERROR: ' + error);
+            throw 'Sending failed: ' + error;
+        }
+      timeout: 60s
+      message_templates:
+        - event_source: TRIGGERS
+          operation_mode: PROBLEM
+          subject: 'Problem: {EVENT.NAME}'
+          message: |
+            Problem name: {EVENT.NAME}
+            Host: {HOST.NAME}
+            Severity: {EVENT.SEVERITY}
+            Operational data: {EVENT.OPDATA}
+            
+        - event_source: TRIGGERS
+          operation_mode: RECOVERY
+          subject: 'Resolved in {EVENT.DURATION}: {EVENT.NAME}'
+          message: |
+            Problem name: {EVENT.NAME}
+            Problem duration: {EVENT.DURATION}
+            Host: {HOST.NAME}
+            
