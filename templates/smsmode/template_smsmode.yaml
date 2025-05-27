@@ -1,0 +1,818 @@
+zabbix_export:
+  version: '7.0'
+  template_groups:
+    - uuid: 7df96b18c230490a9a0a9e2307226338
+      name: Templates
+  templates:
+    - uuid: 82f6926759b44f208f3518dd3d6b479c
+      template: 'smsmode by HTTP'
+      name: 'smsmode by HTTP'
+      groups:
+        - name: Templates
+      items:
+        - uuid: 9ba33587635c481686887c605397dcf3
+          name: 'smsmode: account compagny'
+          type: DEPENDENT
+          key: smsmode.account.company.information
+          delay: '0'
+          history: 7d
+          value_type: CHAR
+          trends: '0'
+          valuemap:
+            name: 'Account state'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - '$.items.[*].companyInformation.name.first()'
+            - type: DISCARD_UNCHANGED_HEARTBEAT
+              parameters:
+                - 1h
+          master_item:
+            key: smsmode.get
+          tags:
+            - tag: component
+              value: smsmode
+        - uuid: 282ec56fd72d425c8751d6d761bd3e96
+          name: 'smsmode: account state'
+          type: DEPENDENT
+          key: smsmode.account.state
+          delay: '0'
+          history: 7d
+          trends: '0'
+          valuemap:
+            name: 'Account state'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - '$.items.[*].state.first()'
+            - type: STR_REPLACE
+              parameters:
+                - ACTIVATED
+                - '1'
+          master_item:
+            key: smsmode.get
+          tags:
+            - tag: component
+              value: smsmode
+          triggers:
+            - uuid: 33adb812191d47f5961e117047ab65ad
+              expression: 'last(/smsmode by HTTP/smsmode.account.state) <> 1'
+              name: 'Account status: Not activated'
+              priority: DISASTER
+              tags:
+                - tag: scope
+                  value: availability
+        - uuid: 1e9cfad6be9242c39f34547d65a04a66
+          name: 'smsmode: api status'
+          type: HTTP_AGENT
+          key: smsmode.api.status
+          delay: 5m
+          history: 7d
+          trends: '0'
+          valuemap:
+            name: 'API Status'
+          preprocessing:
+            - type: CHECK_NOT_SUPPORTED
+              parameters:
+                - '-1'
+              error_handler: CUSTOM_VALUE
+              error_handler_params: 'HTTP/1.1 000'
+            - type: REGEX
+              parameters:
+                - 'HTTP.*?(\d{3})'
+                - \1
+          url: '{$SMSMODE_ORGANISATION_URL}'
+          headers:
+            - name: X-Api-Key
+              value: '{$SMSMODE_API_KEY}'
+            - name: Accept
+              value: application/json
+          retrieve_mode: HEADERS
+          tags:
+            - tag: component
+              value: raw
+          triggers:
+            - uuid: 4e0eaea0b1d34e74b3b4a01bafa9be3a
+              expression: 'last(/smsmode by HTTP/smsmode.api.status) = 0'
+              name: 'API unavailable'
+              priority: DISASTER
+              tags:
+                - tag: scope
+                  value: unavailable
+        - uuid: 58d642d56590480697ebcad1421d192a
+          name: 'smsmode: balance amount'
+          type: DEPENDENT
+          key: smsmode.balance.amount
+          delay: '0'
+          history: 7d
+          value_type: FLOAT
+          units: EUR
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - '$.items.[*].balance.amount.first()'
+          master_item:
+            key: smsmode.get
+          tags:
+            - tag: component
+              value: smsmode
+          triggers:
+            - uuid: e73886d9ef904626a76135a540211b5b
+              expression: 'last(/smsmode by HTTP/smsmode.balance.amount) <= {$ACCOUNT.BALANCE.HIGH}'
+              name: 'Account balance low < {$ACCOUNT.BALANCE.HIGH}'
+              priority: HIGH
+              dependencies:
+                - name: 'Insufficient account balance'
+                  expression: 'last(/smsmode by HTTP/smsmode.balance.amount) <= 0.6'
+              tags:
+                - tag: scope
+                  value: notice
+            - uuid: 43c60cb4b23447ab9c68cc55a7424ef7
+              expression: 'last(/smsmode by HTTP/smsmode.balance.amount) <= {$ACCOUNT.BALANCE.WARN}'
+              name: 'Account balance low < {$ACCOUNT.BALANCE.WARN}'
+              priority: WARNING
+              dependencies:
+                - name: 'Account balance low < {$ACCOUNT.BALANCE.HIGH}'
+                  expression: 'last(/smsmode by HTTP/smsmode.balance.amount) <= {$ACCOUNT.BALANCE.HIGH}'
+              tags:
+                - tag: scope
+                  value: notice
+            - uuid: 6a3503af448847e89a15485c040428b4
+              expression: 'last(/smsmode by HTTP/smsmode.balance.amount) <= 0.6'
+              name: 'Insufficient account balance'
+              priority: DISASTER
+              tags:
+                - tag: scope
+                  value: availability
+        - uuid: 73e797276e314bb7a79d2054cefccf19
+          name: 'smsmode: get  account'
+          type: HTTP_AGENT
+          key: smsmode.get
+          delay: 15m
+          history: '0'
+          value_type: TEXT
+          trends: '0'
+          url: '{$SMSMODE_ORGANISATION_URL}'
+          headers:
+            - name: X-Api-Key
+              value: '{$SMSMODE_API_KEY}'
+            - name: Accept
+              value: application/json
+          tags:
+            - tag: component
+              value: raw
+        - uuid: dd30fc4c30e94ac68bdf924bc1c6781f
+          name: 'smsmode : get messages'
+          type: HTTP_AGENT
+          key: smsmode.get.messages
+          delay: 15m
+          history: '0'
+          value_type: TEXT
+          trends: '0'
+          url: '{$SMSMODE_MESSAGES_URL}'
+          headers:
+            - name: X-Api-Key
+              value: '{$SMSMODE_API_KEY}'
+            - name: Accept
+              value: application/json
+          tags:
+            - tag: component
+              value: raw
+        - uuid: a4b68f82f7a2416a9e10df9b1a3824c5
+          name: 'smsmode: Last messages'
+          type: CALCULATED
+          key: smsmode.messages.status.cal
+          history: 7d
+          params: 'count(last_foreach(/*/smsmode.messages.status[*]))'
+        - uuid: 325d1e03ffbf41d5b22181f1974c4966
+          name: 'smsmode: Last failed messages'
+          type: CALCULATED
+          key: smsmode.messages.status.failed.cal
+          history: 7d
+          params: 'sum(last_foreach(/*/smsmode.messages.status[*]))'
+        - uuid: ad576ce3e10b463a9faa8ded69006a81
+          name: 'smsmode: Last failed messages %'
+          type: CALCULATED
+          key: smsmode.messages.status.failed.percent
+          history: 7d
+          units: '%'
+          params: '(last(//smsmode.messages.status.failed.cal) * 100) / last(//smsmode.messages.status.cal)'
+        - uuid: 6dbb3e5a446447df9c277805bb2ab985
+          name: 'smsmode: monthly consumption'
+          type: DEPENDENT
+          key: smsmode.monthly.consumption
+          delay: '0'
+          history: 7d
+          value_type: FLOAT
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - '$.items.[*].monthlyConsumption.first()'
+          master_item:
+            key: smsmode.get
+          tags:
+            - tag: component
+              value: smsmode
+        - uuid: 6570e13fda1a40d2884b8008ee74e025
+          name: 'smsmode: monthly consumption limit'
+          type: DEPENDENT
+          key: smsmode.monthly.consumption.limit
+          delay: '0'
+          history: 7d
+          value_type: FLOAT
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - '$.items.[*].monthlyConsumptionLimit.first()'
+          master_item:
+            key: smsmode.get
+          tags:
+            - tag: component
+              value: smsmode
+        - uuid: 18105b39d01642fc820b085928dd6e0a
+          name: 'smsmode: SMS available'
+          type: CALCULATED
+          key: smsmode.sms.available
+          delay: 15m
+          history: 7d
+          params: 'last(//smsmode.balance.amount) / {$SMSMODE_PRICE}'
+          tags:
+            - tag: component
+              value: smsmode
+      discovery_rules:
+        - uuid: 4aaf224c44b34072b89c2f08c5cac6c4
+          name: 'messages discovery'
+          type: DEPENDENT
+          key: smsmode.messages.discovery
+          delay: '0'
+          lifetime_type: DELETE_IMMEDIATELY
+          lifetime: '0'
+          item_prototypes:
+            - uuid: 290e69fb23c3470eb6971ff89fee5f39
+              name: '{#MESSAGE_ID} : Message  status detail'
+              type: DEPENDENT
+              key: 'smsmode.messages.status.detail[{{#MESSAGE_ID}]'
+              delay: '0'
+              history: 7d
+              value_type: CHAR
+              trends: '0'
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$.items[?(@.messageId == ''{#MESSAGE_ID}'')].status.detail.first()'
+              master_item:
+                key: smsmode.get.messages
+              tags:
+                - tag: message
+                  value: '{#MESSAGE_ID}'
+                - tag: url
+                  value: 'https://ui.smsmode.com/messages/{#MESSAGE_ID}'
+            - uuid: b86848d40f8e4583b183ebe8c3bffc16
+              name: '{#MESSAGE_ID} : Message  Status'
+              type: DEPENDENT
+              key: 'smsmode.messages.status[{{#MESSAGE_ID}]'
+              delay: '0'
+              history: 7d
+              valuemap:
+                name: 'sms status'
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$.items[?(@.messageId == ''{#MESSAGE_ID}'')].status.value.first()'
+                - type: STR_REPLACE
+                  parameters:
+                    - SENT
+                    - '0'
+                - type: STR_REPLACE
+                  parameters:
+                    - UNDELIVERABLE
+                    - '1'
+              master_item:
+                key: smsmode.get.messages
+              tags:
+                - tag: message
+                  value: '{#MESSAGE_ID}'
+                - tag: url
+                  value: 'https://ui.smsmode.com/messages/{#MESSAGE_ID}'
+              trigger_prototypes:
+                - uuid: c03248390ab849fb9021d39a46d9a36a
+                  expression: 'last(/smsmode by HTTP/smsmode.messages.status[{{#MESSAGE_ID}]) = 1'
+                  name: '{#MESSAGE_ID} : Message  Status : undeliverable'
+                  priority: DISASTER
+                  manual_close: 'YES'
+                  dependencies:
+                    - name: 'Insufficient account balance'
+                      expression: 'last(/smsmode by HTTP/smsmode.balance.amount) <= 0.6'
+                  tags:
+                    - tag: scope
+                      value: 'Message Status'
+          master_item:
+            key: smsmode.get.messages
+          lld_macro_paths:
+            - lld_macro: '{#MESSAGE_ID}'
+              path: $.messageId
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - '$.items[-10:]'
+      macros:
+        - macro: '{$ACCOUNT.BALANCE.HIGH}'
+          value: '2'
+        - macro: '{$ACCOUNT.BALANCE.WARN}'
+          value: '5'
+        - macro: '{$SMSMODE_API_KEY}'
+        - macro: '{$SMSMODE_MESSAGES_URL}'
+          value: 'https://rest.smsmode.com/sms/v1/messages'
+        - macro: '{$SMSMODE_ORGANISATION_URL}'
+          value: 'https://rest.smsmode.com/commons/v1/organisations'
+        - macro: '{$SMSMODE_PRICE}'
+          value: '0.0610'
+      dashboards:
+        - uuid: 76f94284c6ad475082aa46cf1196ee7a
+          name: 'smsmode global view'
+          pages:
+            - widgets:
+                - type: item
+                  name: 'Account status'
+                  width: '7'
+                  fields:
+                    - type: INTEGER
+                      name: decimal_places
+                      value: '0'
+                    - type: INTEGER
+                      name: decimal_size
+                      value: '30'
+                    - type: ITEM
+                      name: itemid.0
+                      value:
+                        host: 'smsmode by HTTP'
+                        key: smsmode.account.state
+                    - type: INTEGER
+                      name: show.0
+                      value: '2'
+                    - type: INTEGER
+                      name: show.1
+                      value: '4'
+                    - type: STRING
+                      name: thresholds.0.color
+                      value: C62828
+                    - type: STRING
+                      name: thresholds.0.threshold
+                      value: '0'
+                    - type: STRING
+                      name: thresholds.1.color
+                      value: 388E3C
+                    - type: STRING
+                      name: thresholds.1.threshold
+                      value: '1'
+                    - type: INTEGER
+                      name: units_size
+                      value: '30'
+                    - type: INTEGER
+                      name: value_size
+                      value: '30'
+                - type: item
+                  name: Balance
+                  'y': '2'
+                  width: '11'
+                  fields:
+                    - type: ITEM
+                      name: itemid.0
+                      value:
+                        host: 'smsmode by HTTP'
+                        key: smsmode.balance.amount
+                    - type: INTEGER
+                      name: show.0
+                      value: '2'
+                    - type: INTEGER
+                      name: show.1
+                      value: '4'
+                    - type: STRING
+                      name: thresholds.0.color
+                      value: C62828
+                    - type: STRING
+                      name: thresholds.0.threshold
+                      value: '0'
+                    - type: STRING
+                      name: thresholds.1.color
+                      value: E65100
+                    - type: STRING
+                      name: thresholds.1.threshold
+                      value: '2'
+                    - type: STRING
+                      name: thresholds.2.color
+                      value: FDD835
+                    - type: STRING
+                      name: thresholds.2.threshold
+                      value: '5'
+                    - type: STRING
+                      name: thresholds.3.color
+                      value: 388E3C
+                    - type: STRING
+                      name: thresholds.3.threshold
+                      value: '10'
+                    - type: INTEGER
+                      name: units_size
+                      value: '30'
+                    - type: INTEGER
+                      name: value_size
+                      value: '35'
+                - type: item
+                  name: 'Last Messages'
+                  'y': '4'
+                  width: '7'
+                  fields:
+                    - type: INTEGER
+                      name: decimal_places
+                      value: '0'
+                    - type: ITEM
+                      name: itemid.0
+                      value:
+                        host: 'smsmode by HTTP'
+                        key: smsmode.messages.status.cal
+                    - type: INTEGER
+                      name: show.0
+                      value: '2'
+                    - type: INTEGER
+                      name: show.1
+                      value: '4'
+                    - type: STRING
+                      name: thresholds.0.color
+                      value: C62828
+                    - type: STRING
+                      name: thresholds.0.threshold
+                      value: '0'
+                    - type: STRING
+                      name: thresholds.1.color
+                      value: 388E3C
+                    - type: STRING
+                      name: thresholds.1.threshold
+                      value: '1'
+                    - type: INTEGER
+                      name: units_size
+                      value: '30'
+                    - type: INTEGER
+                      name: value_size
+                      value: '35'
+                - type: svggraph
+                  name: 'monthly consumption'
+                  'y': '6'
+                  width: '23'
+                  height: '5'
+                  fields:
+                    - type: STRING
+                      name: ds.0.color
+                      value: 26C6DA
+                    - type: STRING
+                      name: ds.0.items.0
+                      value: 'smsmode: monthly consumption'
+                    - type: STRING
+                      name: ds.1.color
+                      value: FF465C
+                    - type: INTEGER
+                      name: ds.1.fill
+                      value: '0'
+                    - type: STRING
+                      name: ds.1.items.0
+                      value: 'smsmode: monthly consumption limit'
+                    - type: INTEGER
+                      name: ds.1.width
+                      value: '2'
+                    - type: INTEGER
+                      name: legend_lines
+                      value: '2'
+                    - type: INTEGER
+                      name: legend_statistic
+                      value: '1'
+                    - type: STRING
+                      name: reference
+                      value: OUMOR
+                    - type: INTEGER
+                      name: righty
+                      value: '0'
+                - type: item
+                  name: 'API status'
+                  x: '7'
+                  width: '7'
+                  fields:
+                    - type: INTEGER
+                      name: decimal_places
+                      value: '0'
+                    - type: INTEGER
+                      name: decimal_size
+                      value: '30'
+                    - type: ITEM
+                      name: itemid.0
+                      value:
+                        host: 'smsmode by HTTP'
+                        key: smsmode.api.status
+                    - type: INTEGER
+                      name: show.0
+                      value: '2'
+                    - type: INTEGER
+                      name: show.1
+                      value: '4'
+                    - type: STRING
+                      name: thresholds.0.color
+                      value: C62828
+                    - type: STRING
+                      name: thresholds.0.threshold
+                      value: '199'
+                    - type: STRING
+                      name: thresholds.1.color
+                      value: 388E3C
+                    - type: STRING
+                      name: thresholds.1.threshold
+                      value: '200'
+                    - type: STRING
+                      name: thresholds.2.color
+                      value: C62828
+                    - type: STRING
+                      name: thresholds.2.threshold
+                      value: '201'
+                    - type: INTEGER
+                      name: units_size
+                      value: '30'
+                    - type: INTEGER
+                      name: value_size
+                      value: '30'
+                - type: item
+                  name: 'Last Failed'
+                  x: '7'
+                  'y': '4'
+                  width: '8'
+                  fields:
+                    - type: INTEGER
+                      name: decimal_places
+                      value: '0'
+                    - type: ITEM
+                      name: itemid.0
+                      value:
+                        host: 'smsmode by HTTP'
+                        key: smsmode.messages.status.cal
+                    - type: INTEGER
+                      name: show.0
+                      value: '2'
+                    - type: INTEGER
+                      name: show.1
+                      value: '4'
+                    - type: STRING
+                      name: thresholds.0.color
+                      value: 388E3C
+                    - type: STRING
+                      name: thresholds.0.threshold
+                      value: '0'
+                    - type: STRING
+                      name: thresholds.1.color
+                      value: FDD835
+                    - type: STRING
+                      name: thresholds.1.threshold
+                      value: '2'
+                    - type: STRING
+                      name: thresholds.2.color
+                      value: E65100
+                    - type: STRING
+                      name: thresholds.2.threshold
+                      value: '4'
+                    - type: STRING
+                      name: thresholds.3.color
+                      value: C62828
+                    - type: STRING
+                      name: thresholds.3.threshold
+                      value: '5'
+                    - type: INTEGER
+                      name: units_size
+                      value: '30'
+                    - type: INTEGER
+                      name: value_size
+                      value: '35'
+                - type: item
+                  name: 'SMS available'
+                  x: '11'
+                  'y': '2'
+                  width: '12'
+                  fields:
+                    - type: INTEGER
+                      name: decimal_places
+                      value: '0'
+                    - type: ITEM
+                      name: itemid.0
+                      value:
+                        host: 'smsmode by HTTP'
+                        key: smsmode.sms.available
+                    - type: INTEGER
+                      name: show.0
+                      value: '2'
+                    - type: INTEGER
+                      name: show.1
+                      value: '4'
+                    - type: STRING
+                      name: thresholds.0.color
+                      value: C62828
+                    - type: STRING
+                      name: thresholds.0.threshold
+                      value: '0'
+                    - type: STRING
+                      name: thresholds.1.color
+                      value: E65100
+                    - type: STRING
+                      name: thresholds.1.threshold
+                      value: '20'
+                    - type: STRING
+                      name: thresholds.2.color
+                      value: FDD835
+                    - type: STRING
+                      name: thresholds.2.threshold
+                      value: '50'
+                    - type: STRING
+                      name: thresholds.3.color
+                      value: 388E3C
+                    - type: STRING
+                      name: thresholds.3.threshold
+                      value: '100'
+                    - type: INTEGER
+                      name: units_size
+                      value: '30'
+                    - type: INTEGER
+                      name: value_size
+                      value: '35'
+                - type: item
+                  name: 'Compagny name'
+                  x: '14'
+                  width: '9'
+                  fields:
+                    - type: INTEGER
+                      name: decimal_size
+                      value: '30'
+                    - type: ITEM
+                      name: itemid.0
+                      value:
+                        host: 'smsmode by HTTP'
+                        key: smsmode.account.company.information
+                    - type: INTEGER
+                      name: show.0
+                      value: '2'
+                    - type: INTEGER
+                      name: show.1
+                      value: '4'
+                    - type: STRING
+                      name: thresholds.0.color
+                      value: FF465C
+                    - type: STRING
+                      name: thresholds.0.threshold
+                      value: '0'
+                    - type: STRING
+                      name: thresholds.1.color
+                      value: 388E3C
+                    - type: STRING
+                      name: thresholds.1.threshold
+                      value: '1'
+                    - type: INTEGER
+                      name: units_size
+                      value: '30'
+                    - type: INTEGER
+                      name: value_size
+                      value: '30'
+                - type: gauge
+                  name: 'Last Failed'
+                  x: '15'
+                  'y': '4'
+                  width: '8'
+                  fields:
+                    - type: INTEGER
+                      name: decimal_places
+                      value: '0'
+                    - type: ITEM
+                      name: itemid.0
+                      value:
+                        host: 'smsmode by HTTP'
+                        key: smsmode.messages.status.failed.percent
+                    - type: STRING
+                      name: max
+                      value: '100'
+                    - type: STRING
+                      name: min
+                      value: '0'
+                    - type: INTEGER
+                      name: show.0
+                      value: '2'
+                    - type: INTEGER
+                      name: show.1
+                      value: '3'
+                    - type: INTEGER
+                      name: show.2
+                      value: '4'
+                    - type: INTEGER
+                      name: show.3
+                      value: '5'
+                    - type: STRING
+                      name: thresholds.0.color
+                      value: 558B2F
+                    - type: STRING
+                      name: thresholds.0.threshold
+                      value: '0'
+                    - type: STRING
+                      name: thresholds.1.color
+                      value: FFEB3B
+                    - type: STRING
+                      name: thresholds.1.threshold
+                      value: '70'
+                    - type: STRING
+                      name: thresholds.2.color
+                      value: FF4000
+                    - type: STRING
+                      name: thresholds.2.threshold
+                      value: '90'
+                    - type: STRING
+                      name: thresholds.3.color
+                      value: C62828
+                    - type: STRING
+                      name: thresholds.3.threshold
+                      value: '100'
+                    - type: INTEGER
+                      name: th_show_arc
+                      value: '1'
+                    - type: INTEGER
+                      name: th_show_labels
+                      value: '1'
+                - type: svggraph
+                  name: Balance
+                  x: '23'
+                  width: '25'
+                  height: '4'
+                  fields:
+                    - type: STRING
+                      name: ds.0.color
+                      value: 26C6DA
+                    - type: STRING
+                      name: ds.0.items.0
+                      value: 'smsmode: balance amount'
+                    - type: INTEGER
+                      name: legend_statistic
+                      value: '1'
+                    - type: STRING
+                      name: reference
+                      value: DDXRR
+                    - type: INTEGER
+                      name: righty
+                      value: '0'
+                - type: problems
+                  x: '23'
+                  'y': '4'
+                  width: '49'
+                  height: '7'
+                  fields:
+                    - type: STRING
+                      name: reference
+                      value: CXMBW
+                - type: svggraph
+                  name: 'SMS available'
+                  x: '48'
+                  width: '24'
+                  height: '4'
+                  fields:
+                    - type: STRING
+                      name: ds.0.color
+                      value: 66BB6A
+                    - type: STRING
+                      name: ds.0.items.0
+                      value: 'smsmode: SMS available'
+                    - type: INTEGER
+                      name: legend_statistic
+                      value: '1'
+                    - type: STRING
+                      name: problem_name
+                      value: 'Insufficient account balance'
+                    - type: STRING
+                      name: reference
+                      value: CULJC
+                    - type: INTEGER
+                      name: righty
+                      value: '0'
+                    - type: INTEGER
+                      name: show_problems
+                      value: '1'
+      valuemaps:
+        - uuid: b78bd86aa6b644e7bd3c063b7707b77e
+          name: 'Account state'
+          mappings:
+            - value: '1'
+              newvalue: Activated
+        - uuid: 49625d08a852428eabcb73de57fcb2cc
+          name: 'API Status'
+          mappings:
+            - value: '200'
+              newvalue: Online
+            - type: LESS_OR_EQUAL
+              value: '199'
+              newvalue: Offline
+            - type: GREATER_OR_EQUAL
+              value: '201'
+              newvalue: Offline
+        - uuid: 7b75d456a2374da69dc5546c39b8250f
+          name: 'sms status'
+          mappings:
+            - value: '1'
+              newvalue: Failed
+            - value: '0'
+              newvalue: Ok
