@@ -1,1 +1,53 @@
 # Proxmox Backup Server by HTTP
+
+## Overview
+
+- This template is designed to monitor Proxmox Backup Server
+- It works without any external scripts and uses the HTTP agent item.
+
+## Requirements
+
+Zabbix version: 7.0 and higher.
+
+
+## Configuration
+
+## Proxmox Backup Server permissions
+
+
+
+
+### Macros used
+
+|Name|Description|Default|
+|----|-----------|-------|
+| {$PBS.CPU.PUSE.MAX.WARN} | Maximum used CPU in percentage. | 90 | 
+| {$PBS.FAILED.TASKS.SINCE} | Tasks since in hours | 24  | 
+| {$PBS.IP} | Proxmox Backup Server IP |  | 
+| {$PBS.MEMORY.PUSE.MAX.WARN} | Maximum used memory in percentage. | 90 | 
+| {$PBS.NODE.NAME} | Internal node name of PBS for API. Not used as https host. | localhost | 
+| {$PBS.ROOT.PUSE.MAX.WARN} | Maximum used root space in percentage. | 90 | 
+| {$PBS.STORAGE.PUSE.MAX.WARN} | Maximum used storage space in percentage. | 90 | 
+| {$PBS.SWAP.PUSE.MAX.WARN} | Maximum used swap in percentage. | 90 | 
+| {$PBS.TOKEN.ID} | API tokens allow stateless access to most parts of the REST API by another system, software or API client. | USER@REALM!TOKENID | 
+| {$PBS.TOKEN.SECRET} | Secret key. | xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx | 
+| {$PBS.URL.PORT} | The API uses the HTTPS protocol and the server listens to port 8007 by default. | 8007 | 
+
+### Items
+
+|Name|Description|Type|Key and additional info| Preprocessing / Formula |
+|----|-----------|----|-----------------------|-------------------------|
+| PBS: Version |<p>.</p>| HTTP Agent| | <ul><li> <p> JSONPath: $.data.version </p>|
+| PBS: Get users |<p>.</p>| HTTP Agent | pbs.users |  |
+| PBS: Get task verify |<p>.</p>| HTTP Agent | pbs.tasks.verify | |
+| PBS: Running tasks |<p>.</p>| HTTP Agent | pbs.tasks.running | <ul><li> <p> JSONPath: $.total </p>|
+| PBS: Get sync |<p>.</p>| HTTP Agent | pbs.sync | |
+| PBS: Get subscription |<p>.</p>| HTTP Agent | pbs.subscription | |
+| PBS: Get datastores usage | <p>.</p>| HTTP Agent | pbs.status.datastore-usage | <ul><li> <p> JSONPath: $.data </p> </li> |
+| PBS: Get remote | <p>.</p> | HTTP Agent | pbs.remote |  |
+| PBS: Get prune | <p>.</p> | HTTP Agent | pbs.prune |  |
+| PBS: API Ping | <p>.</p> | HTTP Agent | pbs.ping | <ul><li> <p> JSONPath: $.data.pong </p> |
+| PBS: Get node status | <p>.</p> | HTTP Agent | pbs.node.status | <ul><li> <p> JSONPath: $.data </p> </li> |
+| PBS: Get garbage collect | <p>.</p> | HTTP Agent | pbs.gc | |
+| PBS: Get prune | <p>.</p> | HTTP Agent | pbs.admin.prune | |
+| PBS: Get failed tasks (last {$PBS.FAILED.TASKS.SINCE}h) |<p>.</p>|script| pbs.tasks.failed | |
