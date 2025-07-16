@@ -116,3 +116,22 @@ Zabbix version: 7.0 and higher.
 |<p>New sync failed tasks</p>||` last(/Proxmox Backup Server by HTTP/pbs.tasks.failed.syncjob) > 1 `| Disaster |
 |<p>New garbage failed tasks</p>||`last(/Proxmox Backup Server by HTTP/pbs.tasks.failed.garbage_collection) > 1 `| Disaster |
 |<p>New backup failed tasks</p>||` last(/Proxmox Backup Server by HTTP/pbs.tasks.failed.backup) > 1`| Disaster |
+
+### LLD rule PBS Datastore discovery
+
+#### Item prototypes 
+
+|Name|Description|Type|Key and additional info| Preprocessing |
+|----|-----------|----|-----------------------|----------------|
+| PBS Datastore: {#DATASTORE} used percent |<p>.</p>|Calculated|pbs.datastore.pused[{#DATASTORE}] |<ul><li><p>last(//pbs.datastore.used[{#DATASTORE}]) / last(//pbs.datastore.total[{#DATASTORE}]) * 100</p></ul>|
+| PBS Datastore: {#DATASTORE} |<p>.</p>|Dependent item|pbs.datastore[{#DATASTORE}] |<ul><li><p>JSONPath: `$[?(@.store == '{#DATASTORE}')]`</p> </li>  <li><p>JSONPath: `$.[0]`</p> </li> </ul>|
+| PBS Datastore: {#DATASTORE} avail |<p>.</p>|Dependent item| pbs.datastore.avail[{#DATASTORE}]|<ul><li><p>JSONPath: `$.avail`</p></li> </ul> |
+| PBS Datastore: {#DATASTORE} total |<p>.</p>|Dependent item| pbs.datastore.total[{#DATASTORE}] |<ul><li><p>JSONPath: `$.total`</p></li> </ul> |
+| PBS Datastore: {#DATASTORE} used |<p>.</p>|Dependent item| pbs.datastore.used[{#DATASTORE}] |<ul><li><p>JSONPath: `$.used`</p></li> </ul> |
+
+
+### Trigger prototypes
+
+|Name|Description|Expression|Severity|Dependencies|
+|----|-----------|----------|--------|--------------------------------|
+|PBS Datastore: {#DATASTORE} high usage||`last(/Proxmox Backup Server by HTTP/pbs.datastore.pused[{#DATASTORE}])>{$PBS.STORAGE.PUSE.MAX.WARN}`|Average ||
