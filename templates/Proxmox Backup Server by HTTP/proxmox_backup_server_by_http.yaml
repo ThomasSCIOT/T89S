@@ -1,0 +1,2788 @@
+zabbix_export:
+  version: '7.0'
+  template_groups:
+    - uuid: 7df96b18c230490a9a0a9e2307226338
+      name: Templates
+  templates:
+    - uuid: 9425adf0d5f94665be22c664e44436a1
+      template: 'Proxmox Backup Server by HTTP'
+      name: 'Proxmox Backup Server by HTTP'
+      groups:
+        - name: Templates
+      items:
+        - uuid: 764b3d6d18c64f9dad3e3b8d5ed578d9
+          name: 'PBS: Get prune'
+          type: HTTP_AGENT
+          key: pbs.admin.prune
+          history: '0'
+          value_type: TEXT
+          trends: '0'
+          timeout: 10s
+          url: 'https://{$PBS.IP}:{$PBS.URL.PORT}/api2/json/admin/prune'
+          headers:
+            - name: Authorization
+              value: 'PBSAPIToken={$PBS.TOKEN.ID}:{$PBS.TOKEN.SECRET}'
+          tags:
+            - tag: component
+              value: raw
+        - uuid: f035e01546ba4fe38c03292d89e7d0c8
+          name: 'PBS: Get garbage collect'
+          type: HTTP_AGENT
+          key: pbs.gc
+          history: '0'
+          value_type: TEXT
+          trends: '0'
+          timeout: 10s
+          url: 'https://{$PBS.IP}:{$PBS.URL.PORT}/api2/json/admin/gc'
+          headers:
+            - name: Authorization
+              value: 'PBSAPIToken={$PBS.TOKEN.ID}:{$PBS.TOKEN.SECRET}'
+          tags:
+            - tag: component
+              value: raw
+        - uuid: 443259dec2c74bc49917cb47cc3fa8f3
+          name: 'PBS: gc disk-bytes'
+          type: DEPENDENT
+          key: pbs.gc.disk-bytes
+          delay: '0'
+          history: 7d
+          trends: '0'
+          units: B
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - '$..[''disk-bytes''].first()'
+              error_handler: DISCARD_VALUE
+          master_item:
+            key: pbs.gc
+          tags:
+            - tag: tasks
+              value: 'garbage collect'
+        - uuid: 88e854cf603b4d669cb39f4e7af62f6a
+          name: 'PBS: gc disk-chunks'
+          type: DEPENDENT
+          key: pbs.gc.disk-chunks
+          delay: '0'
+          history: 7d
+          trends: '0'
+          units: B
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - '$..[''disk-chunks''].first()'
+              error_handler: DISCARD_VALUE
+          master_item:
+            key: pbs.gc
+          tags:
+            - tag: tasks
+              value: 'garbage collect'
+        - uuid: bef788f2b5d345338989b56068630dc6
+          name: 'PBS: gc next-run'
+          type: DEPENDENT
+          key: pbs.gc.next-run
+          delay: '0'
+          history: 7d
+          trends: '0'
+          units: unixtime
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - '$..[''next-run''].first()'
+              error_handler: DISCARD_VALUE
+          master_item:
+            key: pbs.gc
+          tags:
+            - tag: tasks
+              value: 'garbage collect'
+        - uuid: a7df8de2cfde466d976b1e3cff4a8774
+          name: 'PBS: gc pending-bytes'
+          type: DEPENDENT
+          key: pbs.gc.pending-bytes
+          delay: '0'
+          history: 7d
+          trends: '0'
+          units: B
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - '$..[''pending-bytes''].first()'
+              error_handler: DISCARD_VALUE
+          master_item:
+            key: pbs.gc
+          tags:
+            - tag: tasks
+              value: 'garbage collect'
+        - uuid: ebc2f8cccedc4630a64284be649bb2d4
+          name: 'PBS: gc schedule'
+          type: DEPENDENT
+          key: pbs.gc.schedule
+          delay: '0'
+          history: 7d
+          value_type: CHAR
+          trends: '0'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $..schedule.first()
+              error_handler: DISCARD_VALUE
+          master_item:
+            key: pbs.gc
+          tags:
+            - tag: tasks
+              value: 'garbage collect'
+        - uuid: 3ac2cb9cf6bc415a8ae35abf2b5aa7ec
+          name: 'PBS: gc still-bad'
+          type: DEPENDENT
+          key: pbs.gc.still-bad
+          delay: '0'
+          history: 7d
+          trends: '0'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - '$..[''still-bad''].first()'
+              error_handler: DISCARD_VALUE
+          master_item:
+            key: pbs.gc
+          tags:
+            - tag: tasks
+              value: 'garbage collect'
+        - uuid: 67f1fff6957a47eba760b04a95d6677a
+          name: 'PBS: gc store'
+          type: DEPENDENT
+          key: pbs.gc.store
+          delay: '0'
+          history: 7d
+          value_type: CHAR
+          trends: '0'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $..store.first()
+              error_handler: DISCARD_VALUE
+          master_item:
+            key: pbs.gc
+          tags:
+            - tag: tasks
+              value: 'garbage collect'
+        - uuid: ae7ca37e4eac43b1b268c32a17a6be4b
+          name: 'PBS Node: cpu usage'
+          type: DEPENDENT
+          key: pbs.node.cpu
+          delay: '0'
+          history: 7d
+          value_type: FLOAT
+          units: '%'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.cpu
+            - type: MULTIPLIER
+              parameters:
+                - '100'
+          master_item:
+            key: pbs.node.status
+          tags:
+            - tag: component
+              value: memory
+          triggers:
+            - uuid: 2d1602a3362f44b6954f3bd9c7bfd962
+              expression: 'last(/Proxmox Backup Server by HTTP/pbs.node.cpu)>{$PBS.CPU.PUSE.MAX.WARN}'
+              name: 'PBS: Node high cpu usage'
+              event_name: 'PBS: Node high cpu usage (over {$PBS.CPU.PUSE.MAX.WARN} use)'
+              opdata: 'Current use: {ITEM.LASTVALUE1} of {ITEM.LASTVALUE2}'
+              priority: AVERAGE
+              description: 'CPU usage.'
+              tags:
+                - tag: scope
+                  value: performance
+        - uuid: 51fbd1f12daf48d0bd1846da8ba90219
+          name: 'PBS Node: kernel'
+          type: DEPENDENT
+          key: pbs.node.kversion
+          delay: '0'
+          history: 7d
+          value_type: TEXT
+          trends: '0'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.kversion
+          master_item:
+            key: pbs.node.status
+          tags:
+            - tag: component
+              value: system
+        - uuid: b40813589f654e70a9c0c69dc466c387
+          name: 'PBS Node: memory'
+          type: DEPENDENT
+          key: pbs.node.memory
+          delay: '0'
+          history: '0'
+          value_type: TEXT
+          trends: '0'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.memory
+          master_item:
+            key: pbs.node.status
+          tags:
+            - tag: component
+              value: memory
+        - uuid: 85121a08338f47dbb7ec1c16bec23fc4
+          name: 'PBS Node: memory free'
+          type: DEPENDENT
+          key: pbs.node.memory.free
+          delay: '0'
+          history: 7d
+          units: B
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.free
+          master_item:
+            key: pbs.node.memory
+          tags:
+            - tag: component
+              value: memory
+        - uuid: 7a86d826905f4a299a98abdb17cccb34
+          name: 'PBS Node: memory used percent'
+          type: CALCULATED
+          key: pbs.node.memory.pused
+          history: 7d
+          value_type: FLOAT
+          units: '%'
+          params: 'last(//pbs.node.memory.used) / last(//pbs.node.memory.total) * 100'
+          tags:
+            - tag: component
+              value: memory
+          triggers:
+            - uuid: e3ae96b7f05c477fbe2cb81b43f518f1
+              expression: 'last(/Proxmox Backup Server by HTTP/pbs.node.memory.pused)>{$PBS.MEMORY.PUSE.MAX.WARN}'
+              name: 'PBS: Node high memory usage'
+              event_name: 'PBS: Node high memory usage (over {$PBS.MEMORY.PUSE.MAX.WARN} use)'
+              opdata: 'Current use: {ITEM.LASTVALUE1} of {ITEM.LASTVALUE2}'
+              priority: AVERAGE
+              description: 'Memory usage.'
+              tags:
+                - tag: scope
+                  value: performance
+        - uuid: 57f245f277cc4a58bf6ab5321da7c0f5
+          name: 'PBS Node: memory total'
+          type: DEPENDENT
+          key: pbs.node.memory.total
+          delay: '0'
+          history: 7d
+          units: B
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.total
+          master_item:
+            key: pbs.node.memory
+          tags:
+            - tag: component
+              value: memory
+        - uuid: c4b7c5aa989d423e9dc52402207dfd74
+          name: 'PBS Node: memory used'
+          type: DEPENDENT
+          key: pbs.node.memory.used
+          delay: '0'
+          history: 7d
+          units: B
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.used
+          master_item:
+            key: pbs.node.memory
+          tags:
+            - tag: component
+              value: memory
+        - uuid: 398d3fda389846008de4e34fe96cd6d0
+          name: 'PBS Node: root'
+          type: DEPENDENT
+          key: pbs.node.root
+          delay: '0'
+          history: '0'
+          value_type: TEXT
+          trends: '0'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.root
+          master_item:
+            key: pbs.node.status
+          tags:
+            - tag: component
+              value: storage
+        - uuid: eb6d21cf67fe4fdaab78f91f08c21fdf
+          name: 'PBS Node: root avail'
+          type: DEPENDENT
+          key: pbs.node.root.avail
+          delay: '0'
+          history: 7d
+          units: B
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.avail
+          master_item:
+            key: pbs.node.root
+          tags:
+            - tag: component
+              value: storage
+        - uuid: fc96b48841fe4829bd2975def7716b66
+          name: 'PBS Node: root used percent'
+          type: CALCULATED
+          key: pbs.node.root.pused
+          history: 7d
+          value_type: FLOAT
+          units: '%'
+          params: 'last(//pbs.node.root.used) / last(//pbs.node.root.total) * 100'
+          tags:
+            - tag: component
+              value: memory
+          triggers:
+            - uuid: d06e1b95500e46f8b239b8db01c7dad0
+              expression: 'last(/Proxmox Backup Server by HTTP/pbs.node.root.pused)>{$PBS.ROOT.PUSE.MAX.WARN}'
+              name: 'PBS: Node high root usage'
+              event_name: 'PBS: Node high root usage (over {$PBS.ROOT.PUSE.MAX.WARN} use)'
+              opdata: 'Current use: {ITEM.LASTVALUE1} of {ITEM.LASTVALUE2}'
+              priority: AVERAGE
+              description: 'Root usage.'
+              tags:
+                - tag: scope
+                  value: performance
+        - uuid: 95f26e06418845699c36015eb37fd580
+          name: 'PBS Node: root total'
+          type: DEPENDENT
+          key: pbs.node.root.total
+          delay: '0'
+          history: 7d
+          units: B
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.total
+          master_item:
+            key: pbs.node.root
+          tags:
+            - tag: component
+              value: storage
+        - uuid: 86847b6a6f9447859a9e3a1063f5bbc4
+          name: 'PBS Node: root used'
+          type: DEPENDENT
+          key: pbs.node.root.used
+          delay: '0'
+          history: 7d
+          units: B
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.used
+          master_item:
+            key: pbs.node.root
+          tags:
+            - tag: component
+              value: storage
+        - uuid: deb6c3d89d4d4e61ab31e43d87fac71d
+          name: 'PBS: Get node status'
+          type: HTTP_AGENT
+          key: pbs.node.status
+          history: '0'
+          value_type: TEXT
+          trends: '0'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.data
+          timeout: 10s
+          url: 'https://{$PBS.IP}:{$PBS.URL.PORT}/api2/json/nodes/{$PBS.NODE.NAME}/status'
+          headers:
+            - name: Authorization
+              value: 'PBSAPIToken={$PBS.TOKEN.ID}:{$PBS.TOKEN.SECRET}'
+          tags:
+            - tag: component
+              value: raw
+        - uuid: 392447742470439fa79ad4e2e211015e
+          name: 'PBS Node: swap'
+          type: DEPENDENT
+          key: pbs.node.swap
+          delay: '0'
+          history: '0'
+          value_type: TEXT
+          trends: '0'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.swap
+          master_item:
+            key: pbs.node.status
+          tags:
+            - tag: component
+              value: memory
+        - uuid: ab2889a7ec654e9e924c065d1883dc25
+          name: 'PBS Node: swap free'
+          type: DEPENDENT
+          key: pbs.node.swap.free
+          delay: '0'
+          history: 7d
+          units: B
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.free
+          master_item:
+            key: pbs.node.swap
+          tags:
+            - tag: component
+              value: memory
+        - uuid: 0466ecb2b1bd467b91a1fbaf17d0911e
+          name: 'PBS Node: swap used percent'
+          type: CALCULATED
+          key: pbs.node.swap.pused
+          history: 7d
+          value_type: FLOAT
+          units: '%'
+          params: 'last(//pbs.node.swap.used) / last(//pbs.node.swap.total) * 100'
+          tags:
+            - tag: component
+              value: memory
+          triggers:
+            - uuid: 4d70f270e7fe4bc783fea9c3aa4a5030
+              expression: 'last(/Proxmox Backup Server by HTTP/pbs.node.swap.pused)>{$PBS.SWAP.PUSE.MAX.WARN}'
+              name: 'PBS: Node high swap usage'
+              event_name: 'PBS: Node high swap usage (over {$PBS.SWAP.PUSE.MAX.WARN} use)'
+              opdata: 'Current use: {ITEM.LASTVALUE1} of {ITEM.LASTVALUE2}'
+              priority: AVERAGE
+              description: 'Swap usage.'
+              tags:
+                - tag: scope
+                  value: performance
+        - uuid: a5f91341b3cc4057a13479945ec5934a
+          name: 'PBS Node: swap total'
+          type: DEPENDENT
+          key: pbs.node.swap.total
+          delay: '0'
+          history: 7d
+          units: B
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.total
+          master_item:
+            key: pbs.node.swap
+          tags:
+            - tag: component
+              value: memory
+        - uuid: b0f71283d40a4689b3ffbf4540dd04f9
+          name: 'PBS Node: swap used'
+          type: DEPENDENT
+          key: pbs.node.swap.used
+          delay: '0'
+          history: 7d
+          units: B
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.used
+          master_item:
+            key: pbs.node.swap
+          tags:
+            - tag: component
+              value: memory
+        - uuid: 56b079305d7f4a77a771c7c74693a6eb
+          name: 'PBS Node: uptime'
+          type: DEPENDENT
+          key: pbs.node.uptime
+          delay: '0'
+          history: 7d
+          units: s
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.uptime
+          master_item:
+            key: pbs.node.status
+          tags:
+            - tag: component
+              value: system
+        - uuid: 90cc08574a0f4e53af9a4d01300abe7d
+          name: 'PBS: API Ping'
+          type: HTTP_AGENT
+          key: pbs.ping
+          history: 7d
+          trends: '0'
+          valuemap:
+            name: 'API Status'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.data.pong
+            - type: BOOL_TO_DECIMAL
+              parameters:
+                - ''
+          timeout: 30s
+          url: 'https://{$PBS.IP}:{$PBS.URL.PORT}/api2/json/ping'
+          headers:
+            - name: Authorization
+              value: 'PBSAPIToken={$PBS.TOKEN.ID}:{$PBS.TOKEN.SECRET}'
+          tags:
+            - tag: component
+              value: health
+          triggers:
+            - uuid: 8fb708f211ff4a108882c7b9a712ac9e
+              expression: 'last(/Proxmox Backup Server by HTTP/pbs.ping)<>1'
+              name: 'PBS: API service not available'
+              priority: DISASTER
+              description: 'The API service is not available. Check your network and authorization settings.'
+              tags:
+                - tag: scope
+                  value: availability
+        - uuid: 10b908f58ad34fc4a221d128be8aa010
+          name: 'PBS: Get prune'
+          type: HTTP_AGENT
+          key: pbs.prune
+          history: '0'
+          value_type: TEXT
+          trends: '0'
+          timeout: 10s
+          url: 'https://{$PBS.IP}:{$PBS.URL.PORT}/api2/json/config/prune'
+          headers:
+            - name: Authorization
+              value: 'PBSAPIToken={$PBS.TOKEN.ID}:{$PBS.TOKEN.SECRET}'
+          tags:
+            - tag: component
+              value: raw
+        - uuid: 4fc1fb9246fa4346a1ebaf3275270a44
+          name: 'PBS: Prune count'
+          type: DEPENDENT
+          key: pbs.prune.count
+          delay: '0'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $..id.length()
+          master_item:
+            key: pbs.admin.prune
+          tags:
+            - tag: tasks
+              value: prune
+        - uuid: 850cf2587f43470ba6c39c2cc02a6d7f
+          name: 'PBS: Prune task successfull'
+          type: CALCULATED
+          key: pbs.prune.verify.successfull
+          value_type: FLOAT
+          params: 'sum(last_foreach(//pbs.prune.last-run-state[*]))'
+          preprocessing:
+            - type: CHECK_NOT_SUPPORTED
+              parameters:
+                - '-1'
+              error_handler: CUSTOM_VALUE
+              error_handler_params: '-1'
+          tags:
+            - tag: tasks
+              value: prune
+        - uuid: 8166f3b1138c4ec6823753dc8e1d30b7
+          name: 'PBS: Get remote'
+          type: HTTP_AGENT
+          key: pbs.remote
+          history: '0'
+          value_type: TEXT
+          trends: '0'
+          timeout: 10s
+          url: 'https://{$PBS.IP}:{$PBS.URL.PORT}/api2/json/config/remote'
+          headers:
+            - name: Authorization
+              value: 'PBSAPIToken={$PBS.TOKEN.ID}:{$PBS.TOKEN.SECRET}'
+          tags:
+            - tag: component
+              value: raw
+        - uuid: 6828c238e79e44ea8e9abc5e2d1df636
+          name: 'PBS: Get datastores usage'
+          type: HTTP_AGENT
+          key: pbs.status.datastore-usage
+          history: '0'
+          value_type: TEXT
+          trends: '0'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.data
+          timeout: 10s
+          url: 'https://{$PBS.IP}:{$PBS.URL.PORT}/api2/json/status/datastore-usage'
+          headers:
+            - name: Authorization
+              value: 'PBSAPIToken={$PBS.TOKEN.ID}:{$PBS.TOKEN.SECRET}'
+          tags:
+            - tag: component
+              value: raw
+        - uuid: 708e85513aca4c4d9509fbff2a21425a
+          name: 'PBS: Get subscription'
+          type: HTTP_AGENT
+          key: pbs.subscription
+          history: '0'
+          value_type: TEXT
+          trends: '0'
+          timeout: 10s
+          url: 'https://{$PBS.IP}:{$PBS.URL.PORT}/api2/json/nodes/{$PBS.NODE.NAME}/subscription'
+          headers:
+            - name: Authorization
+              value: 'PBSAPIToken={$PBS.TOKEN.ID}:{$PBS.TOKEN.SECRET}'
+          tags:
+            - tag: component
+              value: raw
+        - uuid: 0ea000a2bb02434dbf0c5eb633cc3558
+          name: 'PBS : subscription status'
+          type: DEPENDENT
+          key: pbs.subscription.status
+          delay: '0'
+          valuemap:
+            name: 'Licence status'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $..status.first()
+            - type: STR_REPLACE
+              parameters:
+                - notfound
+                - '0'
+          master_item:
+            key: pbs.subscription
+          tags:
+            - tag: component
+              value: system
+        - uuid: bc1f980541a64b558c1790dec269a26e
+          name: 'PBS: Get sync'
+          type: HTTP_AGENT
+          key: pbs.sync
+          history: '0'
+          value_type: TEXT
+          trends: '0'
+          timeout: 10s
+          url: 'https://{$PBS.IP}:{$PBS.URL.PORT}/api2/json/admin/sync'
+          headers:
+            - name: Authorization
+              value: 'PBSAPIToken={$PBS.TOKEN.ID}:{$PBS.TOKEN.SECRET}'
+          tags:
+            - tag: component
+              value: raw
+        - uuid: 5c4e31d249004c37b3550bd50ee4fade
+          name: 'PBS: Sync task successfull'
+          type: CALCULATED
+          key: pbs.sync.verify.successfull
+          value_type: FLOAT
+          params: 'sum(last_foreach(//pbs.sync.last-run-state[*]))'
+          preprocessing:
+            - type: CHECK_NOT_SUPPORTED
+              parameters:
+                - '-1'
+              error_handler: CUSTOM_VALUE
+              error_handler_params: '-1'
+          tags:
+            - tag: tasks
+              value: sync
+        - uuid: 087bbc0f8cf34b9aab99a2dd202f1161
+          name: 'PBS: Get failed tasks (last {$PBS.FAILED.TASKS.SINCE}h)'
+          type: SCRIPT
+          key: pbs.tasks.failed
+          history: '0'
+          value_type: TEXT
+          trends: '0'
+          params: |
+            try {
+              var params = JSON.parse(value);
+              // Calculer la date actuelle en secondes UNIX
+              var currentDate = Math.floor(Date.now() / 1000);
+              // Soustraire 1 heure (1 heure * 60 minutes * 60 secondes)
+              
+              //var sinceDate = currentDate - 886400;
+              var sinceDate = currentDate - (params.tasks_since * 3600);
+            
+              var req = new HttpRequest();
+              req.addHeader('Authorization: PBSAPIToken=' + params.tokenId +':' + params.tokenSecret);
+              req.addHeader('statusfilter: error');
+            
+              var result = req.get(encodeURI('https://' + params.ip + ':'  + params.port + '/api2/json/nodes/localhost/tasks?since=' + sinceDate + '&statusfilter=error'));
+            
+              return result
+            
+            } catch (error) {
+                Zabbix.log(3, "Proxmox API failed: " + params.url + " Error: " + error);
+                if (!Number.isInteger(error))
+                    return 520;
+            }
+          timeout: 10s
+          parameters:
+            - name: ip
+              value: '{$PBS.IP}'
+            - name: nodeName
+              value: '{$PBS.NODE.NAME}'
+            - name: port
+              value: '{$PBS.URL.PORT}'
+            - name: tasks_since
+              value: '{$PBS.FAILED.TASKS.SINCE}'
+            - name: tokenId
+              value: '{$PBS.TOKEN.ID}'
+            - name: tokenSecret
+              value: '{$PBS.TOKEN.SECRET}'
+          tags:
+            - tag: component
+              value: raw
+            - tag: tasks
+              value: failed
+        - uuid: afa0d72849af417883c66c8e19dbd3bc
+          name: 'PBS: Failed backup tasks {$PBS.FAILED.TASKS.SINCE}h'
+          type: DEPENDENT
+          key: pbs.tasks.failed.backup
+          delay: '0'
+          history: 7d
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - '$.data[?(@.worker_type == "backup")].status.length()'
+          master_item:
+            key: pbs.tasks.failed
+          tags:
+            - tag: tasks
+              value: backup
+            - tag: tasks
+              value: failed
+          triggers:
+            - uuid: a35850edb8064fd6b8e6d09627762aff
+              expression: 'last(/Proxmox Backup Server by HTTP/pbs.tasks.failed.backup) > 1'
+              name: 'New backup failed tasks'
+              priority: DISASTER
+        - uuid: fed81f6bf21d4dcba110d4adcbc0bb08
+          name: 'PBS: Last failed backup error (last {$PBS.FAILED.TASKS.SINCE}h)'
+          type: DEPENDENT
+          key: pbs.tasks.failed.backup.error
+          delay: '0'
+          history: 7d
+          value_type: TEXT
+          trends: '0'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - '$.data[?(@.worker_type == "backup")].status.first()'
+              error_handler: DISCARD_VALUE
+            - type: DISCARD_UNCHANGED
+              parameters:
+                - ''
+          master_item:
+            key: pbs.tasks.failed
+          tags:
+            - tag: tasks
+              value: failed
+            - tag: tasks
+              value: garbage_collection
+        - uuid: 86148cc6ec27403f9fa51d716265c9a9
+          name: 'PBS: Failed tasks (last {$PBS.FAILED.TASKS.SINCE}h)'
+          type: DEPENDENT
+          key: pbs.tasks.failed.count
+          delay: '0'
+          history: 7d
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.data..status.length()
+              error_handler: CUSTOM_VALUE
+              error_handler_params: '0'
+          master_item:
+            key: pbs.tasks.failed
+          tags:
+            - tag: tasks
+              value: backup
+            - tag: tasks
+              value: failed
+        - uuid: 0a4f919d88d64b7b9b7e0693ac60d9de
+          name: 'PBS: Failed garbage tasks (last {$PBS.FAILED.TASKS.SINCE}h)'
+          type: DEPENDENT
+          key: pbs.tasks.failed.garbage_collection
+          delay: '0'
+          history: 7d
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - '$.data[?(@.worker_type == "garbage_collection")].status.length()'
+          master_item:
+            key: pbs.tasks.failed
+          tags:
+            - tag: tasks
+              value: failed
+            - tag: tasks
+              value: garbage_collection
+          triggers:
+            - uuid: 41f213c3b3e2441caf36bd88e6a35381
+              expression: 'last(/Proxmox Backup Server by HTTP/pbs.tasks.failed.garbage_collection) > 1'
+              name: 'New garbage failed tasks'
+              priority: DISASTER
+        - uuid: e82c612f57c54555a38ab8356f4d6f59
+          name: 'PBS: Last failed garbage error (last {$PBS.FAILED.TASKS.SINCE}h)'
+          type: DEPENDENT
+          key: pbs.tasks.failed.garbage_collection.error
+          delay: '0'
+          history: 7d
+          value_type: TEXT
+          trends: '0'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - '$.data[?(@.worker_type == "garbage_collection")].status.first()'
+              error_handler: DISCARD_VALUE
+            - type: DISCARD_UNCHANGED
+              parameters:
+                - ''
+          master_item:
+            key: pbs.tasks.failed
+          tags:
+            - tag: tasks
+              value: failed
+            - tag: tasks
+              value: garbage_collection
+        - uuid: 6e87de4cc7864260aa31471907619c67
+          name: 'PBS: Last failed backup time  (last {$PBS.FAILED.TASKS.SINCE}h)'
+          type: DEPENDENT
+          key: pbs.tasks.failed.last_backup_time
+          delay: '0'
+          history: 7d
+          units: unixtime
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - '$.data[?(@.worker_type == "backup")].first()'
+              error_handler: CUSTOM_VALUE
+              error_handler_params: '0'
+            - type: JSONPATH
+              parameters:
+                - $.endtime
+              error_handler: CUSTOM_VALUE
+              error_handler_params: '0'
+            - type: DISCARD_UNCHANGED_HEARTBEAT
+              parameters:
+                - 1h
+          master_item:
+            key: pbs.tasks.failed
+          tags:
+            - tag: tasks
+              value: backup
+            - tag: tasks
+              value: failed
+        - uuid: 778fbd8edb734acebc279ba798ca4f1d
+          name: 'PBS: Last failed garbage time (last {$PBS.FAILED.TASKS.SINCE}h)'
+          type: DEPENDENT
+          key: pbs.tasks.failed.last_garbage_collection_time
+          delay: '0'
+          history: 7d
+          units: unixtime
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - '$.data[?(@.worker_type == "garbage_collection")].first()'
+              error_handler: CUSTOM_VALUE
+              error_handler_params: '0'
+            - type: JSONPATH
+              parameters:
+                - $.endtime
+              error_handler: CUSTOM_VALUE
+              error_handler_params: '0'
+            - type: DISCARD_UNCHANGED_HEARTBEAT
+              parameters:
+                - 1h
+          master_item:
+            key: pbs.tasks.failed
+          tags:
+            - tag: tasks
+              value: failed
+            - tag: tasks
+              value: garbage_collection
+        - uuid: 86ba7608031b4734b4ab7b196ae047ad
+          name: 'PBS: Last failed reader time (last {$PBS.FAILED.TASKS.SINCE}h)'
+          type: DEPENDENT
+          key: pbs.tasks.failed.last_reader_time
+          delay: '0'
+          history: 7d
+          units: unixtime
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - '$.data[?(@.worker_type == "reader")].first()'
+              error_handler: CUSTOM_VALUE
+              error_handler_params: '0'
+            - type: JSONPATH
+              parameters:
+                - $.endtime
+              error_handler: CUSTOM_VALUE
+              error_handler_params: '0'
+            - type: DISCARD_UNCHANGED_HEARTBEAT
+              parameters:
+                - 1h
+          master_item:
+            key: pbs.tasks.failed
+          tags:
+            - tag: tasks
+              value: failed
+            - tag: tasks
+              value: reader
+        - uuid: d3895020b7814b388ac8862019bf260c
+          name: 'PBS: Last failed sync time (last {$PBS.FAILED.TASKS.SINCE}h)'
+          type: DEPENDENT
+          key: pbs.tasks.failed.last_syncjob_time
+          delay: '0'
+          history: 7d
+          units: unixtime
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - '$.data[?(@.worker_type == "syncjob")].first()'
+              error_handler: CUSTOM_VALUE
+              error_handler_params: '0'
+            - type: JSONPATH
+              parameters:
+                - $.endtime
+              error_handler: CUSTOM_VALUE
+              error_handler_params: '0'
+            - type: DISCARD_UNCHANGED_HEARTBEAT
+              parameters:
+                - 1h
+          master_item:
+            key: pbs.tasks.failed
+          tags:
+            - tag: tasks
+              value: failed
+            - tag: tasks
+              value: sync
+        - uuid: b739790fd1464f3da38d178fce44d847
+          name: 'PBS: Failed reader tasks (last {$PBS.FAILED.TASKS.SINCE}h)'
+          type: DEPENDENT
+          key: pbs.tasks.failed.reader
+          delay: '0'
+          history: 7d
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - '$.data[?(@.worker_type == "reader")].status.length()'
+          master_item:
+            key: pbs.tasks.failed
+          tags:
+            - tag: tasks
+              value: failed
+            - tag: tasks
+              value: reader
+        - uuid: 55f50c63bd6f4617a6d31ff19ef19df2
+          name: 'PBS: Last failed reader error (last {$PBS.FAILED.TASKS.SINCE}h)'
+          type: DEPENDENT
+          key: pbs.tasks.failed.reader.error
+          delay: '0'
+          history: 7d
+          value_type: TEXT
+          trends: '0'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - '$.data[?(@.worker_type == "reader")].status.first()'
+              error_handler: DISCARD_VALUE
+            - type: DISCARD_UNCHANGED
+              parameters:
+                - ''
+          master_item:
+            key: pbs.tasks.failed
+          tags:
+            - tag: tasks
+              value: failed
+            - tag: tasks
+              value: reader
+        - uuid: 2c646274aa4544a880d2ca411fc9f02e
+          name: 'PBS: Failed syncjob tasks (last {$PBS.FAILED.TASKS.SINCE}h)'
+          type: DEPENDENT
+          key: pbs.tasks.failed.syncjob
+          delay: '0'
+          history: 7d
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - '$.data[?(@.worker_type == "syncjob")].status.length()'
+          master_item:
+            key: pbs.tasks.failed
+          tags:
+            - tag: tasks
+              value: failed
+            - tag: tasks
+              value: sync
+          triggers:
+            - uuid: cf6187e1de024a209e80df78e429ed32
+              expression: 'last(/Proxmox Backup Server by HTTP/pbs.tasks.failed.syncjob) > 1'
+              name: 'New sync failed tasks'
+              priority: DISASTER
+        - uuid: d7fd164781344a898e57637eeaddfef4
+          name: 'PBS: Last failed sync error (last {$PBS.FAILED.TASKS.SINCE}h)'
+          type: DEPENDENT
+          key: pbs.tasks.failed.syncjob.error
+          delay: '0'
+          history: 7d
+          value_type: TEXT
+          trends: '0'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - '$.data[?(@.worker_type == "syncjob")].status.first()'
+              error_handler: DISCARD_VALUE
+            - type: DISCARD_UNCHANGED
+              parameters:
+                - ''
+          master_item:
+            key: pbs.tasks.failed
+          tags:
+            - tag: tasks
+              value: failed
+            - tag: tasks
+              value: sync
+        - uuid: 34f14b09bec94d1798159e47528356ea
+          name: 'PBS: Failed verification tasks (last {$PBS.FAILED.TASKS.SINCE}h)'
+          type: DEPENDENT
+          key: pbs.tasks.failed.verificationjob
+          delay: '0'
+          history: 7d
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - '$.data[?(@.worker_type == "verificationjob")].status.length()'
+          master_item:
+            key: pbs.tasks.failed
+          tags:
+            - tag: tasks
+              value: failed
+            - tag: tasks
+              value: verify
+        - uuid: d3e1b36f59d84093b3fdf5bdfaad661a
+          name: 'PBS: Last failed verification error (last {$PBS.FAILED.TASKS.SINCE}h)'
+          type: DEPENDENT
+          key: pbs.tasks.failed.verificationjob.error
+          delay: '0'
+          history: 7d
+          value_type: TEXT
+          trends: '0'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - '$.data[?(@.worker_type == "verificationjob")].status.first()'
+              error_handler: DISCARD_VALUE
+            - type: DISCARD_UNCHANGED
+              parameters:
+                - ''
+          master_item:
+            key: pbs.tasks.failed
+          tags:
+            - tag: tasks
+              value: failed
+            - tag: tasks
+              value: verify
+        - uuid: fb8608a12d3d425392ae71a74e94aba7
+          name: 'PBS: Prune task successfull %'
+          type: CALCULATED
+          key: pbs.tasks.prune.successfull.percent
+          history: 7d
+          value_type: FLOAT
+          units: '%'
+          params: '(last(//pbs.prune.verify.successfull)*100) / last(//pbs.prune.count)'
+          preprocessing:
+            - type: CHECK_NOT_SUPPORTED
+              parameters:
+                - '-1'
+              error_handler: CUSTOM_VALUE
+              error_handler_params: '100'
+          tags:
+            - tag: tasks
+              value: prune
+        - uuid: e6122063cc644e5cb2a2aae12c3838ca
+          name: 'PBS: Running tasks'
+          type: HTTP_AGENT
+          key: pbs.tasks.running
+          history: 7d
+          trends: '0'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.total
+          timeout: 10s
+          url: 'https://{$PBS.IP}:{$PBS.URL.PORT}/api2/json/nodes/{$PBS.NODE.NAME}/tasks'
+          query_fields:
+            - name: running
+              value: 'true'
+            - name: limit
+              value: '0'
+          headers:
+            - name: Authorization
+              value: 'PBSAPIToken={$PBS.TOKEN.ID}:{$PBS.TOKEN.SECRET}'
+          tags:
+            - tag: component
+              value: tasks
+        - uuid: 67d3afcbf9d44e9293ed780fc066a0e9
+          name: 'PBS: Sync task count'
+          type: DEPENDENT
+          key: pbs.tasks.sync.count
+          delay: '0'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $..id.length()
+          master_item:
+            key: pbs.sync
+          tags:
+            - tag: tasks
+              value: sync
+        - uuid: 0de547e997f04e60bf2d96a71f89ffd5
+          name: 'PBS: sync task successfull %'
+          type: CALCULATED
+          key: pbs.tasks.sync.successfull.percent
+          history: 7d
+          value_type: FLOAT
+          units: '%'
+          params: '(last(//pbs.sync.verify.successfull)*100) / last(//pbs.tasks.sync.count)'
+          preprocessing:
+            - type: CHECK_NOT_SUPPORTED
+              parameters:
+                - '-1'
+              error_handler: CUSTOM_VALUE
+              error_handler_params: '100'
+          tags:
+            - tag: tasks
+              value: sync
+        - uuid: 87492aa616d74fed82d18aba8f620ee7
+          name: 'PBS: Get task verify'
+          type: HTTP_AGENT
+          key: pbs.tasks.verify
+          history: '0'
+          value_type: TEXT
+          trends: '0'
+          timeout: 10s
+          url: 'https://{$PBS.IP}:{$PBS.URL.PORT}/api2/json/admin/verify'
+          headers:
+            - name: Authorization
+              value: 'PBSAPIToken={$PBS.TOKEN.ID}:{$PBS.TOKEN.SECRET}'
+          tags:
+            - tag: component
+              value: raw
+        - uuid: 6978a0ff7add4760b5e4679e764ec9ac
+          name: 'PBS: Verify task count'
+          type: DEPENDENT
+          key: pbs.tasks.verify.count
+          delay: '0'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $..id.length()
+          master_item:
+            key: pbs.tasks.verify
+          tags:
+            - tag: tasks
+              value: verify
+        - uuid: 03b4d60d9c4e48feb3fe94ec52e9c8b4
+          name: 'PBS: Verify task successfull'
+          type: CALCULATED
+          key: pbs.tasks.verify.successfull
+          value_type: FLOAT
+          params: 'sum(last_foreach(//pbs.verify.last-run-state[*]))'
+          preprocessing:
+            - type: CHECK_NOT_SUPPORTED
+              parameters:
+                - '-1'
+              error_handler: CUSTOM_VALUE
+              error_handler_params: '-1'
+          tags:
+            - tag: tasks
+              value: verify
+        - uuid: 454ddd42b018409fae39100e2207a02e
+          name: 'PBS: Verify task successfull %'
+          type: CALCULATED
+          key: pbs.tasks.verify.successfull.percent
+          history: 7d
+          value_type: FLOAT
+          units: '%'
+          params: '(last(//pbs.tasks.verify.successfull) * 100) / last(//pbs.tasks.verify.count)'
+          preprocessing:
+            - type: CHECK_NOT_SUPPORTED
+              parameters:
+                - '-1'
+              error_handler: CUSTOM_VALUE
+              error_handler_params: '100'
+          tags:
+            - tag: tasks
+              value: verify
+        - uuid: 92f20c83fa884b998f17e39a2e480c55
+          name: 'PBS: Get users'
+          type: HTTP_AGENT
+          key: pbs.users
+          history: '0'
+          value_type: TEXT
+          trends: '0'
+          timeout: 10s
+          url: 'https://{$PBS.IP}:{$PBS.URL.PORT}/api2/json/access/users'
+          headers:
+            - name: Authorization
+              value: 'PBSAPIToken={$PBS.TOKEN.ID}:{$PBS.TOKEN.SECRET}'
+          tags:
+            - tag: component
+              value: raw
+        - uuid: fa2495d4b03b47199f074da2b3a98364
+          name: 'PBS : Users count'
+          type: DEPENDENT
+          key: pbs.users.count
+          delay: '0'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $..userid.length()
+          master_item:
+            key: pbs.users
+          tags:
+            - tag: component
+              value: system
+          triggers:
+            - uuid: 8b8b82941dc240c6b0b18a1a32e47463
+              expression: 'last(/Proxmox Backup Server by HTTP/pbs.users.count) <> last(/Proxmox Backup Server by HTTP/pbs.users.count,#2)'
+              name: 'Users has changed'
+              priority: HIGH
+              manual_close: 'YES'
+              tags:
+                - tag: scope
+                  value: security
+        - uuid: aff3e30fbe5a49c683f48af8851e9ee8
+          name: 'PBS: Version'
+          type: HTTP_AGENT
+          key: pbs.version
+          history: 7d
+          value_type: TEXT
+          trends: '0'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.data.version
+          timeout: 30s
+          url: 'https://{$PBS.IP}:{$PBS.URL.PORT}/api2/json/version'
+          headers:
+            - name: Authorization
+              value: 'PBSAPIToken={$PBS.TOKEN.ID}:{$PBS.TOKEN.SECRET}'
+          tags:
+            - tag: component
+              value: system
+      discovery_rules:
+        - uuid: be090237e5d84df9b12ce47b637f726b
+          name: 'PBS Datastore discovery'
+          type: DEPENDENT
+          key: pbs.datastore
+          delay: '0'
+          item_prototypes:
+            - uuid: fb7cafc51f354529aafe8c220b673c8e
+              name: 'PBS Datastore: {#DATASTORE} avail'
+              type: DEPENDENT
+              key: 'pbs.datastore.avail[{#DATASTORE}]'
+              delay: '0'
+              history: 7d
+              units: B
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - $.avail
+              master_item:
+                key: 'pbs.datastore[{#DATASTORE}]'
+              tags:
+                - tag: component
+                  value: datastore
+                - tag: datastore
+                  value: '{#DATASTORE}'
+            - uuid: 96c7dbf221484b7d8def5d59190dea0a
+              name: 'PBS Datastore: {#DATASTORE} used percent'
+              type: CALCULATED
+              key: 'pbs.datastore.pused[{#DATASTORE}]'
+              history: 7d
+              value_type: FLOAT
+              units: '%'
+              params: 'last(//pbs.datastore.used[{#DATASTORE}]) / last(//pbs.datastore.total[{#DATASTORE}]) * 100'
+              tags:
+                - tag: component
+                  value: datastore
+                - tag: datastore
+                  value: '{#DATASTORE}'
+              trigger_prototypes:
+                - uuid: 590f923b656242b5a1bdec6aaef93d62
+                  expression: 'last(/Proxmox Backup Server by HTTP/pbs.datastore.pused[{#DATASTORE}])>{$PBS.STORAGE.PUSE.MAX.WARN}'
+                  name: 'PBS Datastore: {#DATASTORE} high usage'
+                  event_name: 'PBS Datastore: {#DATASTORE} high usage (over {$PBS.STORAGE.PUSE.MAX.WARN} use)'
+                  priority: AVERAGE
+                  description: 'Datastore {#DATASTORE} usage'
+            - uuid: 9bec6f569c0d42059c0940538261d6ee
+              name: 'PBS Datastore: {#DATASTORE} total'
+              type: DEPENDENT
+              key: 'pbs.datastore.total[{#DATASTORE}]'
+              delay: '0'
+              history: 7d
+              units: B
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - $.total
+              master_item:
+                key: 'pbs.datastore[{#DATASTORE}]'
+              tags:
+                - tag: component
+                  value: datastore
+                - tag: datastore
+                  value: '{#DATASTORE}'
+            - uuid: 33c0852a8f93444eae457050945ea4ea
+              name: 'PBS Datastore: {#DATASTORE} used'
+              type: DEPENDENT
+              key: 'pbs.datastore.used[{#DATASTORE}]'
+              delay: '0'
+              history: 7d
+              units: B
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - $.used
+              master_item:
+                key: 'pbs.datastore[{#DATASTORE}]'
+              tags:
+                - tag: component
+                  value: datastore
+                - tag: datastore
+                  value: '{#DATASTORE}'
+            - uuid: f5e5f969d67f49769e58734297500e24
+              name: 'PBS Datastore: {#DATASTORE}'
+              type: DEPENDENT
+              key: 'pbs.datastore[{#DATASTORE}]'
+              delay: '0'
+              history: '0'
+              value_type: TEXT
+              trends: '0'
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$[?(@.store == ''{#DATASTORE}'')]'
+                - type: JSONPATH
+                  parameters:
+                    - '$.[0]'
+              master_item:
+                key: pbs.status.datastore-usage
+              tags:
+                - tag: component
+                  value: datastore
+                - tag: datastore
+                  value: '{#DATASTORE}'
+          master_item:
+            key: pbs.status.datastore-usage
+          lld_macro_paths:
+            - lld_macro: '{#DATASTORE}'
+              path: $.store
+        - uuid: d1930a53aa49426294c291d987e6151c
+          name: 'PBS Sync discovery'
+          type: DEPENDENT
+          key: pbs.sync.discovery
+          delay: '0'
+          item_prototypes:
+            - uuid: 5707e373852b4350ad2ad317e99aacdc
+              name: 'PBS: Sync job {#SYNC_ID} last-run-endtime'
+              type: DEPENDENT
+              key: 'pbs.sync.last-run-endtime[{#SYNC_ID}]'
+              delay: '0'
+              history: 7d
+              units: unixtime
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$.data[?(@.id == ''{#SYNC_ID}'')].[''last-run-endtime''].first()'
+                  error_handler: DISCARD_VALUE
+              master_item:
+                key: pbs.sync
+              tags:
+                - tag: ns
+                  value: '{#SYNC_NS}'
+                - tag: remote
+                  value: '{#SYNC_REMOTE}'
+                - tag: sync
+                  value: '{#SYNC_ID}'
+                - tag: tasks
+                  value: sync
+            - uuid: 3f74e5e682f7435896ca65101c5b5b0a
+              name: 'PBS: Sync job {#SYNC_ID} last-run-state'
+              type: DEPENDENT
+              key: 'pbs.sync.last-run-state[{#SYNC_ID}]'
+              delay: '0'
+              history: 7d
+              trends: '0'
+              valuemap:
+                name: 'Verify tasks states'
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$.data[?(@.id == ''{#SYNC_ID}'')].[''last-run-state''].first()'
+                  error_handler: CUSTOM_VALUE
+                  error_handler_params: '0'
+                - type: REGEX
+                  parameters:
+                    - '^(?!OK$).*'
+                    - '0'
+                  error_handler: CUSTOM_VALUE
+                  error_handler_params: '1'
+              master_item:
+                key: pbs.sync
+              tags:
+                - tag: ns
+                  value: '{#SYNC_NS}'
+                - tag: remote
+                  value: '{#SYNC_REMOTE}'
+                - tag: sync
+                  value: '{#SYNC_ID}'
+                - tag: tasks
+                  value: sync
+              trigger_prototypes:
+                - uuid: e5021fa320db48c2a09db25c3d0e49fb
+                  expression: 'last(/Proxmox Backup Server by HTTP/pbs.sync.last-run-state[{#SYNC_ID}]) = 0'
+                  name: 'PBS: Sync job {#SYNC_ID} failed'
+                  priority: DISASTER
+                  manual_close: 'YES'
+                  tags:
+                    - tag: scope
+                      value: availability
+            - uuid: 25e338b671364d439a9a9439094aa335
+              name: 'PBS: Sync job {#SYNC_ID} next run'
+              type: DEPENDENT
+              key: 'pbs.sync.next-run[{#SYNC_ID}]'
+              delay: '0'
+              history: 7d
+              units: unixtime
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$.data[?(@.id == ''{#SYNC_ID}'')].[''next-run''].first()'
+                  error_handler: DISCARD_VALUE
+              master_item:
+                key: pbs.sync
+              tags:
+                - tag: ns
+                  value: '{#SYNC_NS}'
+                - tag: remote
+                  value: '{#SYNC_REMOTE}'
+                - tag: sync
+                  value: '{#SYNC_ID}'
+                - tag: tasks
+                  value: sync
+            - uuid: b7893ffd32424c9baffdc7852a415745
+              name: 'PBS: Sync job {#SYNC_ID} ns'
+              type: DEPENDENT
+              key: 'pbs.sync.ns[{#SYNC_ID}]'
+              delay: '0'
+              history: 7d
+              value_type: CHAR
+              trends: '0'
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$.data[?(@.id == ''{#SYNC_ID}'')].ns.first()'
+                  error_handler: DISCARD_VALUE
+              master_item:
+                key: pbs.sync
+              tags:
+                - tag: ns
+                  value: '{#SYNC_NS}'
+                - tag: remote
+                  value: '{#SYNC_REMOTE}'
+                - tag: sync
+                  value: '{#SYNC_ID}'
+                - tag: tasks
+                  value: sync
+            - uuid: c8c46dc760f34e7483839f94ac3cd227
+              name: 'PBS: Sync job {#SYNC_ID} schedule'
+              type: DEPENDENT
+              key: 'pbs.sync.schedule[{#SYNC_ID}]'
+              delay: '0'
+              history: 7d
+              value_type: CHAR
+              trends: '0'
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$.data[?(@.id == ''{#SYNC_ID}'')].schedule.first()'
+                  error_handler: DISCARD_VALUE
+              master_item:
+                key: pbs.sync
+              tags:
+                - tag: ns
+                  value: '{#SYNC_NS}'
+                - tag: remote
+                  value: '{#SYNC_REMOTE}'
+                - tag: sync
+                  value: '{#SYNC_ID}'
+                - tag: tasks
+                  value: sync
+          master_item:
+            key: pbs.sync
+          lld_macro_paths:
+            - lld_macro: '{#SYNC_ID}'
+              path: $..id.first()
+            - lld_macro: '{#SYNC_NS}'
+              path: $..ns.first()
+            - lld_macro: '{#SYNC_REMOTE}'
+              path: $..remote.first()
+        - uuid: ebbc188bf0a04b7eb9b4dc542562d2d4
+          name: 'PBS Users discovery'
+          type: DEPENDENT
+          key: pbs.users.discovery
+          delay: '0'
+          filter:
+            conditions:
+              - macro: '{#PBS_USERID}'
+                value: root@pam
+                operator: NOT_MATCHES_REGEX
+                formulaid: A
+          item_prototypes:
+            - uuid: c0038d292672416a8b993c62e4e84fa7
+              name: 'PBS: user {#PBS_USERID} status'
+              type: DEPENDENT
+              key: 'pbs.user.enable[{#PBS_USERID}]'
+              delay: '0'
+              history: 7d
+              valuemap:
+                name: 'Account status'
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$.data[?(@.userid == ''{#PBS_USERID}'')].enable.first()'
+                - type: BOOL_TO_DECIMAL
+                  parameters:
+                    - ''
+              master_item:
+                key: pbs.users
+              tags:
+                - tag: component
+                  value: user
+              trigger_prototypes:
+                - uuid: 5cd857bbd2484646bf94e06189f6da59
+                  expression: 'last(/Proxmox Backup Server by HTTP/pbs.user.enable[{#PBS_USERID}]) = 0'
+                  name: 'PBS: user {#PBS_USERID} is disable'
+                  priority: WARNING
+                  manual_close: 'YES'
+                  tags:
+                    - tag: scope
+                      value: configuration
+            - uuid: 3dd0a8a5a99d470090622f830aa72c6f
+              name: 'PBS: user {#PBS_USERID} is expires'
+              type: DEPENDENT
+              key: 'pbs.user.status[{#PBS_USERID}]'
+              delay: '0'
+              history: 7d
+              valuemap:
+                name: 'Account status'
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$.data[?(@.userid == ''{#PBS_USERID}'')].expire.first()'
+                - type: BOOL_TO_DECIMAL
+                  parameters:
+                    - ''
+              master_item:
+                key: pbs.users
+              tags:
+                - tag: component
+                  value: user
+          master_item:
+            key: pbs.users
+          lld_macro_paths:
+            - lld_macro: '{#PBS_USERID}'
+              path: $..userid.first()
+        - uuid: 6c61089ad362455dab0961cc8262014a
+          name: 'PBS Prune configuration discovery'
+          type: DEPENDENT
+          key: prune.discovery
+          delay: '0'
+          item_prototypes:
+            - uuid: 599ce176ebe44186a01eca125aa7729a
+              name: 'Prune {#PRUNE_ID} : Keep-last'
+              type: DEPENDENT
+              key: 'pbs.prune.keep-last[{#PRUNE_ID}]'
+              delay: '0'
+              history: 7d
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$.data[?(@.id == ''{#PRUNE_ID}'')].[''keep-last''].first()'
+                  error_handler: CUSTOM_VALUE
+                  error_handler_params: '0'
+              master_item:
+                key: pbs.admin.prune
+              tags:
+                - tag: prune
+                  value: '{#PRUNE_ID}'
+                - tag: tasks
+                  value: prune
+              trigger_prototypes:
+                - uuid: bc9c04d3e2aa403a907d1ecb1e9c77a4
+                  expression: 'last(/Proxmox Backup Server by HTTP/pbs.prune.keep-last[{#PRUNE_ID}]) <> last(/Proxmox Backup Server by HTTP/pbs.prune.keep-last[{#PRUNE_ID}],#2)'
+                  name: 'Prune {#PRUNE_ID} : Keep-last has changed'
+                  priority: WARNING
+                  tags:
+                    - tag: scope
+                      value: configuration
+            - uuid: 1aa0c0241b7b4faabf76ef7e526f2fd8
+              name: 'Prune {#PRUNE_ID} : Keep-monthly'
+              type: DEPENDENT
+              key: 'pbs.prune.keep-monthly[{#PRUNE_ID}]'
+              delay: '0'
+              history: 7d
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$.data[?(@.id == ''{#PRUNE_ID}'')].[''keep-monthly''].first()'
+                  error_handler: CUSTOM_VALUE
+                  error_handler_params: '0'
+              master_item:
+                key: pbs.admin.prune
+              tags:
+                - tag: prune
+                  value: '{#PRUNE_ID}'
+                - tag: tasks
+                  value: prune
+              trigger_prototypes:
+                - uuid: c2f50d3afe7347169f45c1848cab1b3b
+                  expression: 'last(/Proxmox Backup Server by HTTP/pbs.prune.keep-monthly[{#PRUNE_ID}]) <> last(/Proxmox Backup Server by HTTP/pbs.prune.keep-monthly[{#PRUNE_ID}],#2)'
+                  name: 'Prune {#PRUNE_ID} : Keep-monthly has changed'
+                  priority: WARNING
+                  manual_close: 'YES'
+                  tags:
+                    - tag: scope
+                      value: configuration
+            - uuid: c81d7aec68094efeb3eb934ec57e4d2f
+              name: 'Prune {#PRUNE_ID} : Keep-weekly'
+              type: DEPENDENT
+              key: 'pbs.prune.keep-weekly[{#PRUNE_ID}]'
+              delay: '0'
+              history: 7d
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$.data[?(@.id == ''{#PRUNE_ID}'')].[''keep-weekly''].first()'
+                  error_handler: CUSTOM_VALUE
+                  error_handler_params: '0'
+              master_item:
+                key: pbs.admin.prune
+              tags:
+                - tag: prune
+                  value: '{#PRUNE_ID}'
+                - tag: tasks
+                  value: prune
+              trigger_prototypes:
+                - uuid: b3b9aa5d39254e7aab7740c789e92669
+                  expression: 'last(/Proxmox Backup Server by HTTP/pbs.prune.keep-weekly[{#PRUNE_ID}]) <> last(/Proxmox Backup Server by HTTP/pbs.prune.keep-weekly[{#PRUNE_ID}],#2)'
+                  name: 'Prune {#PRUNE_ID} : Keep-weekly has change'
+                  priority: WARNING
+                  tags:
+                    - tag: scope
+                      value: configuration
+            - uuid: 3f28bbb256c34e3f8676f4b850cd4057
+              name: 'Prune {#PRUNE_ID} : last-run-endtime'
+              type: DEPENDENT
+              key: 'pbs.prune.last-run-endtime[{#PRUNE_ID}]'
+              delay: '0'
+              history: 7d
+              units: unixtime
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$.data[?(@.id == ''{#PRUNE_ID}'')].[''last-run-endtime''].first()'
+                  error_handler: CUSTOM_VALUE
+                  error_handler_params: '0'
+              master_item:
+                key: pbs.admin.prune
+              tags:
+                - tag: prune
+                  value: '{#PRUNE_ID}'
+                - tag: tasks
+                  value: prune
+            - uuid: c8e92f5a3a31464cb9d588d1766a64c5
+              name: 'Prune {#PRUNE_ID} : last-run-state'
+              type: DEPENDENT
+              key: 'pbs.prune.last-run-state[{#PRUNE_ID}]'
+              delay: '0'
+              history: 7d
+              valuemap:
+                name: 'Verify tasks states'
+              preprocessing:
+                - type: CHECK_NOT_SUPPORTED
+                  parameters:
+                    - '-1'
+                  error_handler: CUSTOM_VALUE
+                  error_handler_params: '0'
+                - type: JSONPATH
+                  parameters:
+                    - '$.data[?(@.id == ''{#PRUNE_ID}'')].[''last-run-state''].first()'
+                  error_handler: CUSTOM_VALUE
+                  error_handler_params: '0'
+                - type: STR_REPLACE
+                  parameters:
+                    - OK
+                    - '1'
+              master_item:
+                key: pbs.admin.prune
+              tags:
+                - tag: prune
+                  value: '{#PRUNE_ID}'
+                - tag: tasks
+                  value: prune
+            - uuid: 19b9e2cb463b4f9aae7ce47572ac6a3d
+              name: 'Prune {#PRUNE_ID} : schedule'
+              type: DEPENDENT
+              key: 'pbs.prune.schedule[{#PRUNE_ID}]'
+              delay: '0'
+              history: 7d
+              value_type: CHAR
+              trends: '0'
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$.data[?(@.id == ''{#PRUNE_ID}'')].schedule.first()'
+              master_item:
+                key: pbs.admin.prune
+              tags:
+                - tag: prune
+                  value: '{#PRUNE_ID}'
+                - tag: tasks
+                  value: prune
+            - uuid: 782b2e8d1dfd4ccda9ddcda3e3ead004
+              name: 'Prune {#PRUNE_ID} : store'
+              type: DEPENDENT
+              key: 'pbs.prune.store[{#PRUNE_ID}]'
+              delay: '0'
+              history: 7d
+              value_type: CHAR
+              trends: '0'
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$.data[?(@.id == ''{#PRUNE_ID}'')].store.first()'
+              master_item:
+                key: pbs.admin.prune
+              tags:
+                - tag: prune
+                  value: '{#PRUNE_ID}'
+                - tag: tasks
+                  value: prune
+          master_item:
+            key: pbs.prune
+          lld_macro_paths:
+            - lld_macro: '{#PRUNE_ID}'
+              path: $..id.first()
+        - uuid: 646235613a524d978b5c9e3d922d3b07
+          name: 'PBS verify tasks discovery'
+          type: DEPENDENT
+          key: verify.discovery
+          delay: '0'
+          item_prototypes:
+            - uuid: 40c9130fd3f84fe5b5f3dbf071e275f0
+              name: 'Verify tasks: {#VERIFY_ID} last run endtime'
+              type: DEPENDENT
+              key: 'pbs.verify.last-run-endtime[{#VERIFY_ID}]'
+              delay: '0'
+              history: 7d
+              units: unixtime
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$.data[?(@.id == ''{#VERIFY_ID}'')].[''last-run-endtime''].first()'
+                  error_handler: CUSTOM_VALUE
+                  error_handler_params: '0'
+              master_item:
+                key: pbs.tasks.verify
+              tags:
+                - tag: tasks
+                  value: verify
+                - tag: 'verify task'
+                  value: '{#VERIFY_ID}'
+            - uuid: 39ea8fdda11c44a882ea138ff6a25000
+              name: 'Verify tasks: {#VERIFY_ID} last run state'
+              type: DEPENDENT
+              key: 'pbs.verify.last-run-state[{#VERIFY_ID}]'
+              delay: '0'
+              history: 7d
+              value_type: FLOAT
+              trends: '0'
+              valuemap:
+                name: 'Verify tasks states'
+              preprocessing:
+                - type: CHECK_NOT_SUPPORTED
+                  parameters:
+                    - '-1'
+                  error_handler: CUSTOM_VALUE
+                  error_handler_params: '0'
+                - type: JSONPATH
+                  parameters:
+                    - '$.data[?(@.id == ''{#VERIFY_ID}'')].[''last-run-state''].first()'
+                  error_handler: CUSTOM_VALUE
+                  error_handler_params: unknown
+                - type: REGEX
+                  parameters:
+                    - '^(?!OK$).*'
+                    - '0'
+                  error_handler: CUSTOM_VALUE
+                  error_handler_params: '1'
+              master_item:
+                key: pbs.tasks.verify
+              tags:
+                - tag: tasks
+                  value: verify
+                - tag: 'verify task'
+                  value: '{#VERIFY_ID}'
+            - uuid: c1e8183ffad34b1490dda21b74bcd492
+              name: 'Verify tasks: {#VERIFY_ID} next run'
+              type: DEPENDENT
+              key: 'pbs.verify.next-run[{#VERIFY_ID}]'
+              delay: '0'
+              history: 7d
+              units: unixtime
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$.data[?(@.id == ''{#VERIFY_ID}'')].[''next-run''].first()'
+                  error_handler: DISCARD_VALUE
+              master_item:
+                key: pbs.tasks.verify
+              tags:
+                - tag: tasks
+                  value: verify
+                - tag: 'verify task'
+                  value: '{#VERIFY_ID}'
+            - uuid: 9c8b2acc7fb24ca784452787f4bfe9a0
+              name: 'Verify tasks: {#VERIFY_ID} ns'
+              type: DEPENDENT
+              key: 'pbs.verify.ns[{#VERIFY_ID}]'
+              delay: '0'
+              history: 7d
+              value_type: CHAR
+              trends: '0'
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$.data[?(@.id == ''{#VERIFY_ID}'')].ns.first()'
+                  error_handler: DISCARD_VALUE
+              master_item:
+                key: pbs.tasks.verify
+              tags:
+                - tag: tasks
+                  value: verify
+                - tag: 'verify task'
+                  value: '{#VERIFY_ID}'
+              trigger_prototypes:
+                - uuid: 66253f124ed34f4e9c10ec9b2cea4d70
+                  expression: 'last(/Proxmox Backup Server by HTTP/pbs.verify.ns[{#VERIFY_ID}]) <> last(/Proxmox Backup Server by HTTP/pbs.verify.ns[{#VERIFY_ID}],#2)'
+                  name: 'Verify tasks: {#VERIFY_ID} ns has changed'
+                  priority: WARNING
+                  tags:
+                    - tag: scope
+                      value: configuration
+            - uuid: 181f90dd7be44a97b07ca4d886e3eb83
+              name: 'Verify tasks: {#VERIFY_ID} outdated-after'
+              type: DEPENDENT
+              key: 'pbs.verify.outdated-after[{#VERIFY_ID}]'
+              delay: '0'
+              history: 7d
+              trends: '0'
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$.data[?(@.id == ''{#VERIFY_ID}'')].[''outdated-after''].first()'
+                  error_handler: DISCARD_VALUE
+              master_item:
+                key: pbs.tasks.verify
+              tags:
+                - tag: tasks
+                  value: verify
+                - tag: 'verify task'
+                  value: '{#VERIFY_ID}'
+            - uuid: f28efdcdfe5a4f9bb80102b06d401103
+              name: 'Verify tasks: {#VERIFY_ID} schedule'
+              type: DEPENDENT
+              key: 'pbs.verify.schedule[{#VERIFY_ID}]'
+              delay: '0'
+              history: 7d
+              value_type: CHAR
+              trends: '0'
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$.data[?(@.id == ''{#VERIFY_ID}'')].schedule.first()'
+                  error_handler: DISCARD_VALUE
+              master_item:
+                key: pbs.tasks.verify
+              tags:
+                - tag: tasks
+                  value: verify
+                - tag: 'verify task'
+                  value: '{#VERIFY_ID}'
+              trigger_prototypes:
+                - uuid: 46ab28f095584137a0a9f9200d14eaf3
+                  expression: 'last(/Proxmox Backup Server by HTTP/pbs.verify.schedule[{#VERIFY_ID}]) <> last(/Proxmox Backup Server by HTTP/pbs.verify.schedule[{#VERIFY_ID}],#2)'
+                  name: 'Verify tasks: {#VERIFY_ID} schedule has changed'
+                  priority: WARNING
+                  tags:
+                    - tag: scope
+                      value: configuration
+            - uuid: 38c24213036c49bc99b2a1d6112e0dab
+              name: 'Verify tasks: {#VERIFY_ID} store'
+              type: DEPENDENT
+              key: 'pbs.verify.store[{#VERIFY_ID}]'
+              delay: '0'
+              history: 7d
+              value_type: CHAR
+              trends: '0'
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$.data[?(@.id == ''{#VERIFY_ID}'')].store.first()'
+                  error_handler: DISCARD_VALUE
+              master_item:
+                key: pbs.tasks.verify
+              tags:
+                - tag: tasks
+                  value: verify
+                - tag: 'verify task'
+                  value: '{#VERIFY_ID}'
+              trigger_prototypes:
+                - uuid: 4db31bd8f7044cec8655741dea57d268
+                  expression: 'last(/Proxmox Backup Server by HTTP/pbs.verify.store[{#VERIFY_ID}]) <> last(/Proxmox Backup Server by HTTP/pbs.verify.store[{#VERIFY_ID}],#2)'
+                  name: 'Verify tasks: {#VERIFY_ID} store has changed'
+                  priority: WARNING
+                  tags:
+                    - tag: scope
+                      value: configuration
+          trigger_prototypes:
+            - uuid: dbc6da3b3a5d4b5bb640934594edc577
+              expression: 'fuzzytime(/Proxmox Backup Server by HTTP/pbs.verify.last-run-endtime[{#VERIFY_ID}],90000s) = 0 and last(/Proxmox Backup Server by HTTP/pbs.verify.last-run-state[{#VERIFY_ID}]) <> 0'
+              name: 'Verify tasks: {#VERIFY_ID} last run endtime > 24h'
+              priority: AVERAGE
+              description: 'fuzzytime(/Template App WireGuard/wg.endpoint.handshake[{#PEER}],90000s)=0'
+              manual_close: 'YES'
+              tags:
+                - tag: scope
+                  value: availability
+            - uuid: eac1f524e627477d9d468ec1ad43dc62
+              expression: 'last(/Proxmox Backup Server by HTTP/pbs.verify.last-run-state[{#VERIFY_ID}]) <> 1 and last(/Proxmox Backup Server by HTTP/pbs.verify.last-run-endtime[{#VERIFY_ID}]) <> 0'
+              name: 'Verify tasks: {#VERIFY_ID} last run failed'
+              priority: DISASTER
+              manual_close: 'YES'
+              tags:
+                - tag: scope
+                  value: availability
+          master_item:
+            key: pbs.tasks.verify
+          lld_macro_paths:
+            - lld_macro: '{#VERIFY_ID}'
+              path: $..id.first()
+      macros:
+        - macro: '{$PBS.CPU.PUSE.MAX.WARN}'
+          value: '90'
+          description: 'Maximum used CPU in percentage.'
+        - macro: '{$PBS.FAILED.TASKS.SINCE}'
+          value: '24'
+          description: 'Tasks since in hours'
+        - macro: '{$PBS.IP}'
+        - macro: '{$PBS.MEMORY.PUSE.MAX.WARN}'
+          value: '90'
+          description: 'Maximum used memory in percentage.'
+        - macro: '{$PBS.NODE.NAME}'
+          value: localhost
+          description: 'Internal node name of PBS for API. Not used as https host.'
+        - macro: '{$PBS.ROOT.PUSE.MAX.WARN}'
+          value: '90'
+          description: 'Maximum used root space in percentage.'
+        - macro: '{$PBS.STORAGE.PUSE.MAX.WARN}'
+          value: '90'
+          description: 'Maximum used storage space in percentage.'
+        - macro: '{$PBS.SWAP.PUSE.MAX.WARN}'
+          value: '90'
+          description: 'Maximum used swap in percentage.'
+        - macro: '{$PBS.TOKEN.ID}'
+          value: USER@REALM!TOKENID
+          description: 'API tokens allow stateless access to most parts of the REST API by another system, software or API client.'
+        - macro: '{$PBS.TOKEN.SECRET}'
+          value: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+          description: 'Secret key.'
+        - macro: '{$PBS.URL.PORT}'
+          value: '8007'
+          description: 'The API uses the HTTPS protocol and the server listens to port 8007 by default.'
+      dashboards:
+        - uuid: 4f3fc004e9cd4e1fa610879787f63dc4
+          name: 'Proxmox Backup'
+          pages:
+            - widgets:
+                - type: svggraph
+                  name: 'Runing tasks'
+                  width: '21'
+                  height: '4'
+                  fields:
+                    - type: STRING
+                      name: ds.0.color
+                      value: 689F38
+                    - type: STRING
+                      name: ds.0.items.0
+                      value: 'PBS: Running tasks'
+                    - type: INTEGER
+                      name: legend_statistic
+                      value: '1'
+                    - type: STRING
+                      name: reference
+                      value: YBHKH
+                    - type: INTEGER
+                      name: righty
+                      value: '0'
+                - type: svggraph
+                  name: Memory
+                  'y': '4'
+                  width: '21'
+                  height: '4'
+                  fields:
+                    - type: STRING
+                      name: ds.0.color
+                      value: 1976D2
+                    - type: STRING
+                      name: ds.0.items.0
+                      value: 'PBS Node: memory used'
+                    - type: STRING
+                      name: ds.1.color
+                      value: FF465C
+                    - type: INTEGER
+                      name: ds.1.fill
+                      value: '0'
+                    - type: STRING
+                      name: ds.1.items.0
+                      value: 'PBS Node: memory total'
+                    - type: INTEGER
+                      name: legend
+                      value: '0'
+                    - type: STRING
+                      name: reference
+                      value: QWZAB
+                    - type: INTEGER
+                      name: righty
+                      value: '0'
+                - type: svggraph
+                  name: 'CPU Usage'
+                  'y': '8'
+                  width: '21'
+                  height: '4'
+                  fields:
+                    - type: STRING
+                      name: ds.0.color
+                      value: 558B2F
+                    - type: STRING
+                      name: ds.0.items.0
+                      value: 'PBS Node: cpu usage'
+                    - type: INTEGER
+                      name: legend
+                      value: '0'
+                    - type: STRING
+                      name: reference
+                      value: IIEIZ
+                    - type: INTEGER
+                      name: righty
+                      value: '0'
+                - type: graphprototype
+                  name: 'Datastore usage %'
+                  'y': '12'
+                  width: '39'
+                  height: '8'
+                  fields:
+                    - type: INTEGER
+                      name: columns
+                      value: '1'
+                    - type: ITEM_PROTOTYPE
+                      name: itemid.0
+                      value:
+                        host: 'Proxmox Backup Server by HTTP'
+                        key: 'pbs.datastore.pused[{#DATASTORE}]'
+                    - type: STRING
+                      name: reference
+                      value: MGOCZ
+                    - type: INTEGER
+                      name: source_type
+                      value: '3'
+                - type: item
+                  name: 'Total Sync tasks'
+                  x: '21'
+                  width: '7'
+                  fields:
+                    - type: INTEGER
+                      name: decimal_places
+                      value: '0'
+                    - type: ITEM
+                      name: itemid.0
+                      value:
+                        host: 'Proxmox Backup Server by HTTP'
+                        key: pbs.tasks.sync.count
+                    - type: INTEGER
+                      name: show.0
+                      value: '2'
+                    - type: INTEGER
+                      name: show.1
+                      value: '4'
+                - type: gauge
+                  name: 'Sync successfull'
+                  x: '21'
+                  'y': '2'
+                  width: '7'
+                  fields:
+                    - type: INTEGER
+                      name: decimal_places
+                      value: '1'
+                    - type: ITEM
+                      name: itemid.0
+                      value:
+                        host: 'Proxmox Backup Server by HTTP'
+                        key: pbs.tasks.sync.successfull.percent
+                    - type: STRING
+                      name: max
+                      value: '100'
+                    - type: STRING
+                      name: min
+                      value: '-1'
+                    - type: INTEGER
+                      name: show.0
+                      value: '2'
+                    - type: INTEGER
+                      name: show.1
+                      value: '3'
+                    - type: INTEGER
+                      name: show.2
+                      value: '4'
+                    - type: INTEGER
+                      name: show.3
+                      value: '5'
+                    - type: STRING
+                      name: thresholds.0.color
+                      value: 0EC9AC
+                    - type: STRING
+                      name: thresholds.0.threshold
+                      value: '-1'
+                    - type: STRING
+                      name: thresholds.1.color
+                      value: FF465C
+                    - type: STRING
+                      name: thresholds.1.threshold
+                      value: '0'
+                    - type: STRING
+                      name: thresholds.2.color
+                      value: FFD54F
+                    - type: STRING
+                      name: thresholds.2.threshold
+                      value: '90'
+                    - type: STRING
+                      name: thresholds.3.color
+                      value: 33691E
+                    - type: STRING
+                      name: thresholds.3.threshold
+                      value: '100'
+                    - type: INTEGER
+                      name: th_show_arc
+                      value: '1'
+                    - type: INTEGER
+                      name: th_show_labels
+                      value: '1'
+                - type: itemhistory
+                  name: 'Last backup errors'
+                  x: '21'
+                  'y': '4'
+                  width: '51'
+                  height: '4'
+                  fields:
+                    - type: ITEM
+                      name: columns.0.itemid
+                      value:
+                        host: 'Proxmox Backup Server by HTTP'
+                        key: pbs.tasks.failed.backup.error
+                    - type: STRING
+                      name: columns.0.name
+                      value: 'Failed backup tasks'
+                    - type: STRING
+                      name: reference
+                      value: NGTIJ
+                    - type: INTEGER
+                      name: rf_rate
+                      value: '60'
+                    - type: INTEGER
+                      name: show_column_header
+                      value: '1'
+                - type: itemhistory
+                  name: 'Last sync errors'
+                  x: '21'
+                  'y': '8'
+                  width: '26'
+                  height: '4'
+                  fields:
+                    - type: ITEM
+                      name: columns.0.itemid
+                      value:
+                        host: 'Proxmox Backup Server by HTTP'
+                        key: pbs.tasks.failed.syncjob.error
+                    - type: STRING
+                      name: columns.0.name
+                      value: error
+                    - type: STRING
+                      name: reference
+                      value: EVTGY
+                    - type: INTEGER
+                      name: show_column_header
+                      value: '1'
+                - type: item
+                  name: 'Total Verify tasks'
+                  x: '28'
+                  width: '7'
+                  fields:
+                    - type: INTEGER
+                      name: decimal_places
+                      value: '0'
+                    - type: ITEM
+                      name: itemid.0
+                      value:
+                        host: 'Proxmox Backup Server by HTTP'
+                        key: pbs.tasks.verify.count
+                    - type: INTEGER
+                      name: show.0
+                      value: '2'
+                    - type: INTEGER
+                      name: show.1
+                      value: '4'
+                - type: gauge
+                  name: 'Verify successfull'
+                  x: '28'
+                  'y': '2'
+                  width: '7'
+                  fields:
+                    - type: INTEGER
+                      name: decimal_places
+                      value: '1'
+                    - type: ITEM
+                      name: itemid.0
+                      value:
+                        host: 'Proxmox Backup Server by HTTP'
+                        key: pbs.tasks.verify.successfull.percent
+                    - type: STRING
+                      name: max
+                      value: '100'
+                    - type: STRING
+                      name: min
+                      value: '-1'
+                    - type: INTEGER
+                      name: show.0
+                      value: '2'
+                    - type: INTEGER
+                      name: show.1
+                      value: '3'
+                    - type: INTEGER
+                      name: show.2
+                      value: '4'
+                    - type: INTEGER
+                      name: show.3
+                      value: '5'
+                    - type: STRING
+                      name: thresholds.0.color
+                      value: 0EC9AC
+                    - type: STRING
+                      name: thresholds.0.threshold
+                      value: '-1'
+                    - type: STRING
+                      name: thresholds.1.color
+                      value: FF465C
+                    - type: STRING
+                      name: thresholds.1.threshold
+                      value: '0'
+                    - type: STRING
+                      name: thresholds.2.color
+                      value: FFD54F
+                    - type: STRING
+                      name: thresholds.2.threshold
+                      value: '90'
+                    - type: STRING
+                      name: thresholds.3.color
+                      value: 33691E
+                    - type: STRING
+                      name: thresholds.3.threshold
+                      value: '100'
+                    - type: INTEGER
+                      name: th_show_arc
+                      value: '1'
+                    - type: INTEGER
+                      name: th_show_labels
+                      value: '1'
+                - type: item
+                  name: 'Total Prune tasks'
+                  x: '35'
+                  width: '7'
+                  fields:
+                    - type: INTEGER
+                      name: decimal_places
+                      value: '0'
+                    - type: ITEM
+                      name: itemid.0
+                      value:
+                        host: 'Proxmox Backup Server by HTTP'
+                        key: pbs.prune.count
+                    - type: INTEGER
+                      name: show.0
+                      value: '2'
+                    - type: INTEGER
+                      name: show.1
+                      value: '4'
+                - type: gauge
+                  name: 'Prune successfull'
+                  x: '35'
+                  'y': '2'
+                  width: '7'
+                  fields:
+                    - type: INTEGER
+                      name: decimal_places
+                      value: '1'
+                    - type: ITEM
+                      name: itemid.0
+                      value:
+                        host: 'Proxmox Backup Server by HTTP'
+                        key: pbs.tasks.prune.successfull.percent
+                    - type: STRING
+                      name: max
+                      value: '100'
+                    - type: STRING
+                      name: min
+                      value: '-1'
+                    - type: INTEGER
+                      name: show.0
+                      value: '2'
+                    - type: INTEGER
+                      name: show.1
+                      value: '3'
+                    - type: INTEGER
+                      name: show.2
+                      value: '4'
+                    - type: INTEGER
+                      name: show.3
+                      value: '5'
+                    - type: STRING
+                      name: thresholds.0.color
+                      value: 0EC9AC
+                    - type: STRING
+                      name: thresholds.0.threshold
+                      value: '-1'
+                    - type: STRING
+                      name: thresholds.1.color
+                      value: FF465C
+                    - type: STRING
+                      name: thresholds.1.threshold
+                      value: '0'
+                    - type: STRING
+                      name: thresholds.2.color
+                      value: FFD54F
+                    - type: STRING
+                      name: thresholds.2.threshold
+                      value: '90'
+                    - type: STRING
+                      name: thresholds.3.color
+                      value: 33691E
+                    - type: STRING
+                      name: thresholds.3.threshold
+                      value: '100'
+                    - type: INTEGER
+                      name: th_show_arc
+                      value: '1'
+                    - type: INTEGER
+                      name: th_show_labels
+                      value: '1'
+                - type: tophosts
+                  name: 'Failed tasks (24h)'
+                  x: '42'
+                  width: '30'
+                  fields:
+                    - type: INTEGER
+                      name: columns.0.aggregate_function
+                      value: '0'
+                    - type: STRING
+                      name: columns.0.base_color
+                      value: ''
+                    - type: INTEGER
+                      name: columns.0.data
+                      value: '2'
+                    - type: INTEGER
+                      name: columns.0.decimal_places
+                      value: '2'
+                    - type: STRING
+                      name: columns.0.name
+                      value: Name
+                    - type: INTEGER
+                      name: columns.1.aggregate_function
+                      value: '0'
+                    - type: STRING
+                      name: columns.1.base_color
+                      value: ''
+                    - type: INTEGER
+                      name: columns.1.data
+                      value: '1'
+                    - type: INTEGER
+                      name: columns.1.decimal_places
+                      value: '0'
+                    - type: INTEGER
+                      name: columns.1.display
+                      value: '1'
+                    - type: INTEGER
+                      name: columns.1.history
+                      value: '1'
+                    - type: STRING
+                      name: columns.1.item
+                      value: 'PBS: Failed tasks (last 24h)'
+                    - type: STRING
+                      name: columns.1.name
+                      value: Total
+                    - type: INTEGER
+                      name: columns.2.aggregate_function
+                      value: '0'
+                    - type: STRING
+                      name: columns.2.base_color
+                      value: ''
+                    - type: INTEGER
+                      name: columns.2.data
+                      value: '1'
+                    - type: INTEGER
+                      name: columns.2.decimal_places
+                      value: '0'
+                    - type: INTEGER
+                      name: columns.2.display
+                      value: '1'
+                    - type: INTEGER
+                      name: columns.2.history
+                      value: '1'
+                    - type: STRING
+                      name: columns.2.item
+                      value: 'PBS: Failed backup tasks 24h'
+                    - type: STRING
+                      name: columns.2.name
+                      value: Backup
+                    - type: INTEGER
+                      name: columns.3.aggregate_function
+                      value: '0'
+                    - type: STRING
+                      name: columns.3.base_color
+                      value: ''
+                    - type: INTEGER
+                      name: columns.3.data
+                      value: '1'
+                    - type: INTEGER
+                      name: columns.3.decimal_places
+                      value: '0'
+                    - type: INTEGER
+                      name: columns.3.display
+                      value: '1'
+                    - type: INTEGER
+                      name: columns.3.history
+                      value: '1'
+                    - type: STRING
+                      name: columns.3.item
+                      value: 'PBS: Failed garbage tasks (last 24h)'
+                    - type: STRING
+                      name: columns.3.name
+                      value: Garbage
+                    - type: INTEGER
+                      name: columns.4.aggregate_function
+                      value: '0'
+                    - type: STRING
+                      name: columns.4.base_color
+                      value: ''
+                    - type: INTEGER
+                      name: columns.4.data
+                      value: '1'
+                    - type: INTEGER
+                      name: columns.4.decimal_places
+                      value: '0'
+                    - type: INTEGER
+                      name: columns.4.display
+                      value: '1'
+                    - type: INTEGER
+                      name: columns.4.history
+                      value: '1'
+                    - type: STRING
+                      name: columns.4.item
+                      value: 'PBS: Failed syncjob tasks (last 24h)'
+                    - type: STRING
+                      name: columns.4.name
+                      value: Sync
+                    - type: INTEGER
+                      name: columns.5.aggregate_function
+                      value: '0'
+                    - type: STRING
+                      name: columns.5.base_color
+                      value: ''
+                    - type: INTEGER
+                      name: columns.5.data
+                      value: '1'
+                    - type: INTEGER
+                      name: columns.5.decimal_places
+                      value: '0'
+                    - type: INTEGER
+                      name: columns.5.display
+                      value: '1'
+                    - type: INTEGER
+                      name: columns.5.history
+                      value: '1'
+                    - type: STRING
+                      name: columns.5.item
+                      value: 'PBS: Failed verification tasks (last 24h)'
+                    - type: STRING
+                      name: columns.5.name
+                      value: Verification
+                    - type: INTEGER
+                      name: columns.6.aggregate_function
+                      value: '0'
+                    - type: STRING
+                      name: columns.6.base_color
+                      value: ''
+                    - type: INTEGER
+                      name: columns.6.data
+                      value: '1'
+                    - type: INTEGER
+                      name: columns.6.decimal_places
+                      value: '0'
+                    - type: INTEGER
+                      name: columns.6.display
+                      value: '1'
+                    - type: INTEGER
+                      name: columns.6.history
+                      value: '1'
+                    - type: STRING
+                      name: columns.6.item
+                      value: 'PBS: Failed reader tasks (last 24h)'
+                    - type: STRING
+                      name: columns.6.name
+                      value: Reader
+                    - type: STRING
+                      name: columnsthresholds.1.color.0
+                      value: 689F38
+                    - type: STRING
+                      name: columnsthresholds.1.color.1
+                      value: F9A825
+                    - type: STRING
+                      name: columnsthresholds.1.color.2
+                      value: F4511E
+                    - type: STRING
+                      name: columnsthresholds.1.threshold.0
+                      value: '0'
+                    - type: STRING
+                      name: columnsthresholds.1.threshold.1
+                      value: '1'
+                    - type: STRING
+                      name: columnsthresholds.1.threshold.2
+                      value: '6'
+                    - type: STRING
+                      name: columnsthresholds.2.color.0
+                      value: 689F38
+                    - type: STRING
+                      name: columnsthresholds.2.color.1
+                      value: F9A825
+                    - type: STRING
+                      name: columnsthresholds.2.color.2
+                      value: F4511E
+                    - type: STRING
+                      name: columnsthresholds.2.threshold.0
+                      value: '0'
+                    - type: STRING
+                      name: columnsthresholds.2.threshold.1
+                      value: '1'
+                    - type: STRING
+                      name: columnsthresholds.2.threshold.2
+                      value: '6'
+                    - type: STRING
+                      name: columnsthresholds.3.color.0
+                      value: 689F38
+                    - type: STRING
+                      name: columnsthresholds.3.color.1
+                      value: F9A825
+                    - type: STRING
+                      name: columnsthresholds.3.color.2
+                      value: F4511E
+                    - type: STRING
+                      name: columnsthresholds.3.threshold.0
+                      value: '0'
+                    - type: STRING
+                      name: columnsthresholds.3.threshold.1
+                      value: '1'
+                    - type: STRING
+                      name: columnsthresholds.3.threshold.2
+                      value: '6'
+                    - type: STRING
+                      name: columnsthresholds.4.color.0
+                      value: 689F38
+                    - type: STRING
+                      name: columnsthresholds.4.color.1
+                      value: F9A825
+                    - type: STRING
+                      name: columnsthresholds.4.color.2
+                      value: F4511E
+                    - type: STRING
+                      name: columnsthresholds.4.threshold.0
+                      value: '0'
+                    - type: STRING
+                      name: columnsthresholds.4.threshold.1
+                      value: '1'
+                    - type: STRING
+                      name: columnsthresholds.4.threshold.2
+                      value: '6'
+                    - type: STRING
+                      name: columnsthresholds.5.color.0
+                      value: 689F38
+                    - type: STRING
+                      name: columnsthresholds.5.color.1
+                      value: F9A825
+                    - type: STRING
+                      name: columnsthresholds.5.color.2
+                      value: F4511E
+                    - type: STRING
+                      name: columnsthresholds.5.threshold.0
+                      value: '0'
+                    - type: STRING
+                      name: columnsthresholds.5.threshold.1
+                      value: '1'
+                    - type: STRING
+                      name: columnsthresholds.5.threshold.2
+                      value: '6'
+                    - type: STRING
+                      name: columnsthresholds.6.color.0
+                      value: 689F38
+                    - type: STRING
+                      name: columnsthresholds.6.color.1
+                      value: F9A825
+                    - type: STRING
+                      name: columnsthresholds.6.color.2
+                      value: F4511E
+                    - type: STRING
+                      name: columnsthresholds.6.threshold.0
+                      value: '0'
+                    - type: STRING
+                      name: columnsthresholds.6.threshold.1
+                      value: '1'
+                    - type: STRING
+                      name: columnsthresholds.6.threshold.2
+                      value: '6'
+                    - type: STRING
+                      name: reference
+                      value: AUIZZ
+                - type: item
+                  name: 'Garbage Pending'
+                  x: '42'
+                  'y': '2'
+                  width: '10'
+                  fields:
+                    - type: INTEGER
+                      name: decimal_places
+                      value: '0'
+                    - type: ITEM
+                      name: itemid.0
+                      value:
+                        host: 'Proxmox Backup Server by HTTP'
+                        key: pbs.gc.pending-bytes
+                    - type: INTEGER
+                      name: show.0
+                      value: '2'
+                    - type: INTEGER
+                      name: show.1
+                      value: '4'
+                - type: itemhistory
+                  name: 'Last verification errors'
+                  x: '47'
+                  'y': '8'
+                  width: '25'
+                  height: '4'
+                  fields:
+                    - type: ITEM
+                      name: columns.0.itemid
+                      value:
+                        host: 'Proxmox Backup Server by HTTP'
+                        key: pbs.tasks.failed.verificationjob.error
+                    - type: STRING
+                      name: columns.0.name
+                      value: error
+                    - type: STRING
+                      name: reference
+                      value: GCNZU
+                    - type: INTEGER
+                      name: show_column_header
+                      value: '1'
+                - type: item
+                  name: 'Garbage still-bad'
+                  x: '52'
+                  'y': '2'
+                  width: '10'
+                  fields:
+                    - type: INTEGER
+                      name: decimal_places
+                      value: '0'
+                    - type: ITEM
+                      name: itemid.0
+                      value:
+                        host: 'Proxmox Backup Server by HTTP'
+                        key: pbs.gc.still-bad
+                    - type: INTEGER
+                      name: show.0
+                      value: '2'
+                    - type: INTEGER
+                      name: show.1
+                      value: '4'
+                - type: item
+                  name: 'Garbage next-run'
+                  x: '62'
+                  'y': '2'
+                  width: '10'
+                  fields:
+                    - type: INTEGER
+                      name: decimal_places
+                      value: '0'
+                    - type: INTEGER
+                      name: decimal_size
+                      value: '25'
+                    - type: ITEM
+                      name: itemid.0
+                      value:
+                        host: 'Proxmox Backup Server by HTTP'
+                        key: pbs.gc.next-run
+                    - type: INTEGER
+                      name: show.0
+                      value: '2'
+                    - type: INTEGER
+                      name: show.1
+                      value: '4'
+                    - type: INTEGER
+                      name: units_size
+                      value: '25'
+                    - type: INTEGER
+                      name: value_size
+                      value: '25'
+      valuemaps:
+        - uuid: e94fbecbf2c64d0faf6d557b2b1fed5c
+          name: 'Account status'
+          mappings:
+            - value: '0'
+              newvalue: 'false'
+            - value: '1'
+              newvalue: 'true'
+        - uuid: 5b72fb4c6ad341cca9cba1f7a87318e1
+          name: 'API Status'
+          mappings:
+            - value: '1'
+              newvalue: Online
+            - value: '0'
+              newvalue: Offline
+        - uuid: 068f24e7e980497095e05dcdacf4a855
+          name: 'Licence status'
+          mappings:
+            - value: '0'
+              newvalue: Community
+        - uuid: 9106b5fde9cd47678612782877f35e3b
+          name: 'Verify tasks states'
+          mappings:
+            - value: '1'
+              newvalue: Ok
+            - value: '0'
+              newvalue: 'Error / Unknown'
