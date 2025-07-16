@@ -135,3 +135,56 @@ Zabbix version: 7.0 and higher.
 |Name|Description|Expression|Severity|Dependencies|
 |----|-----------|----------|--------|--------------------------------|
 |PBS Datastore: {#DATASTORE} high usage||`last(/Proxmox Backup Server by HTTP/pbs.datastore.pused[{#DATASTORE}])>{$PBS.STORAGE.PUSE.MAX.WARN}`|Average ||
+
+
+### LLD rule PBS Prune configuration discovery
+
+#### Item prototypes 
+
+|Name|Description|Type|Key and additional info| Preprocessing |
+|----|-----------|----|-----------------------|----------------|
+| Prune {#PRUNE_ID} : Keep-weekly |<p>.</p>|Dependent item|pbs.prune.keep-weekly[{#PRUNE_ID}] |<ul><li><p> JSONPath: $.data[?(@.id == '{#PRUNE_ID}')].['keep-weekly'].first()   <p> Custom Failed : Set to value 0   </p> </p>   </li> </ul>|
+| Prune {#PRUNE_ID} : schedule |<p>.</p>|Dependent item|pbs.prune.schedule[{#PRUNE_ID}] |<ul><li><p> JSONPath: $.data[?(@.id == '{#PRUNE_ID}')].schedule.first()</li> </ul>|
+| Prune {#PRUNE_ID} : store |<p>.</p>|Dependent item|pbs.prune.store[{#PRUNE_ID}] |<ul><li><p> JSONPath: $.data[?(@.id == '{#PRUNE_ID}')].store.first()   </p>  </li> </ul>|
+| Prune {#PRUNE_ID} : last-run-endtime |<p>.</p>|Dependent item|pbs.prune.last-run-endtime[{#PRUNE_ID}] |<ul><li><p> JSONPath $.data[?(@.id == '{#PRUNE_ID}')].['last-run-endtime'].first()   <p> Custom Failed : Set to value 0   </p> </p> </li>  </li> </ul>|
+| Prune {#PRUNE_ID} : last-run-state |<p>.</p>|Dependent item|pbs.prune.last-run-state[{#PRUNE_ID}] |<ul><li><p> Check for not supported value : Any => Set to value 0   <p> Custom Failed : Set to value 0    </li> <li> <p> JSONPath: $.data[?(@.id == '{#PRUNE_ID}')].['last-run-state'].first() </p> <p>Custom failed 0 </p> </li> <li> <p>Replace : OK => 1 </p> </li></ul>|
+| Prune {#PRUNE_ID} : Keep-last |<p>.</p>|Dependent item|pbs.prune.keep-last[{#PRUNE_ID}]|<ul><li><p> JSONPath $.data[?(@.id == '{#PRUNE_ID}')].['keep-last'].first()   <p> Custom Failed : Set to value 0   </p> </p> </li>  </li> </ul>|
+| Prune {#PRUNE_ID} : Keep-monthly |<p>.</p>|Dependent item|pbs.prune.keep-monthly[{#PRUNE_ID}]|<ul><li><p> JSONPath $.data[?(@.id == '{#PRUNE_ID}')].['keep-monthly'].first()   <p> Custom Failed : Set to value 0   </p> </p> </li>  </li> </ul>|
+
+
+### Trigger prototypes
+
+|Name|Description|Expression|Severity|Dependencies|
+|----|-----------|----------|--------|--------------------------------|
+|Prune {#PRUNE_ID} : Keep-last has changed ||` last(/Proxmox Backup Server by HTTP/pbs.prune.keep-last[{#PRUNE_ID}]) <> last(/Proxmox Backup Server by HTTP/pbs.prune.keep-last[{#PRUNE_ID}],#2)`|Warning ||
+|Prune {#PRUNE_ID} : Keep-monthly has changed ||`last(/Proxmox Backup Server by HTTP/pbs.prune.keep-monthly[{#PRUNE_ID}]) <> last(/Proxmox Backup Server by HTTP/pbs.prune.keep-monthly[{#PRUNE_ID}],#2) `|Warning ||
+| Prune {#PRUNE_ID} : Keep-weekly has change||`last(/Proxmox Backup Server by HTTP/pbs.prune.keep-weekly[{#PRUNE_ID}]) <> last(/Proxmox Backup Server by HTTP/pbs.prune.keep-weekly[{#PRUNE_ID}],#2) `|Warning ||
+
+
+### LLD rule PBS Sync discovery
+
+#### Item prototypes 
+
+|Name|Description|Type|Key and additional info| Preprocessing |
+|----|-----------|----|-----------------------|----------------|
+| PBS: Sync job {#SYNC_ID} next run |<p>.</p>|Dependent item| pbs.sync.next-run[{#SYNC_ID}]  |<ul><li><p> JSONPath $.data[?(@.id == '{#SYNC_ID}')].['next-run'].first() <p> Custom Failed : Discard value   </p> </p>   </li> </ul>|
+| PBS: Sync job {#SYNC_ID} last-run-endtime |<p>.</p>|Dependent item| pbs.sync.last-run-endtime[{#SYNC_ID}]  |<ul><li><p> JSONPath $.data[?(@.id == '{#SYNC_ID}')].['last-run-endtime'].first() <p> Custom Failed : Discard value   </p> </p>   </li> </ul>|
+| PBS: Sync job {#SYNC_ID} last-run-state |<p>.</p>|Dependent item| pbs.sync.last-run-state[{#SYNC_ID}]  |<ul><li><p> JSONPath $.data[?(@.id == '{#SYNC_ID}')].['last-run-state'].first() <p> Custom Failed : Discard value   </p> </p>   </li> <li><p> Regular Expression `^(?!OK$).*`  `0` </p> <p> Custom failed : Set to value 1 </p> </li> </ul>|
+| PBS: Sync job {#SYNC_ID} schedule |<p>.</p>|Dependent item| pbs.sync.schedule[{#SYNC_ID}]  |<ul><li><p> JSONPath $.data[?(@.id == '{#SYNC_ID}')].['schedule'].first() <p> Custom Failed : Discard value   </p> </p>   </li> </ul>|
+| PBS: Sync job {#SYNC_ID} ns |<p>.</p>|Dependent item| pbs.sync.ns[{#SYNC_ID}]  |<ul><li><p> JSONPath $.data[?(@.id == '{#SYNC_ID}')].['ns'].first() <p> Custom Failed : Discard value   </p> </p>   </li> </ul>|
+
+
+### Trigger prototypes
+
+|Name|Description|Expression|Severity|Dependencies|
+|----|-----------|----------|--------|--------------------------------|
+|PBS: Sync job {#SYNC_ID} failed ||` last(/Proxmox Backup Server by HTTP/pbs.sync.last-run-state[{#SYNC_ID}]) = 0`|Disaster ||
+
+
+
+
+
+
+
+
+
