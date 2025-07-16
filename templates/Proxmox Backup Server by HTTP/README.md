@@ -68,3 +68,29 @@ Zabbix version: 7.0 and higher.
 | PBS: Failed garbage tasks (last {$PBS.FAILED.TASKS.SINCE}h) |<p>.</p>|Dependent item| pbs.tasks.failed.garbage_collection | <ul><li> <p> JSONPath: $.data[?(@.worker_type == "garbage_collection")].status.length() <p> Custom failed : Set value 0 <p> </p> </li> <li><p> JSONPath: $.endtime  </p></li> <li><p> JSONPath: $.endtime  <p> Custom failed : Set value 0 <p>  </p></li> <li><p> Discard Unchanged with heartbeat : 1h  </p></li></ul>|
 | PBS: Failed tasks (last {$PBS.FAILED.TASKS.SINCE}h) |<p>.</p>|Dependent item| pbs.tasks.failed.count | <ul><li> <p> JSONPath: $.data..status.length() <p> Custom failed : Set value 0 <p> </p> </li></ul>|
 | PBS: Last failed backup error (last {$PBS.FAILED.TASKS.SINCE}h) |<p>.</p>|Dependent item| pbs.tasks.failed.backup.error | <ul><li> <p> $.data[?(@.worker_type == "backup")].status.first() <p> Custom failed : Discard value <p> </p> </li></ul>|
+| PBS: Failed backup tasks {$PBS.FAILED.TASKS.SINCE}h |<p>.</p>|Dependent item| pbs.tasks.failed.backup | <ul><li> <p> JSONPath: $.data[?(@.worker_type == "backup")].status.length()  </p> </li></ul>|
+| PBS : subscription status |<p>.</p>|Dependent item| pbs.subscription.status | <ul><li> <p> JSON: $..status.first() </p> </li> <li><p> Replace: notfound => 0  </p></li></ul>|
+| PBS: Prune count |<p>.</p>|Dependent item|pbs.prune.count | <ul><li> <p> JSONPath: $..id.length() </p> </li></ul>|
+| PBS Node: uptime |<p>.</p>|Dependent item| pbs.node.uptime | <ul><li> <p> JSONPath: $.uptime </p> </li></ul>|
+| PBS Node: swap used |<p>.</p>|Dependent item| pbs.node.swap.used | <ul><li> <p> JSONPath: $.used</p> </li> <li><p>  </p></li></ul>|
+| PBS Node: swap total |<p>.</p>|Dependent item| pbs.node.swap.total | <ul><li> <p> JSONPath: $.total</p> </li></ul>|
+| PBS Node: swap free |<p>.</p>|Dependent item| pbs.node.swap.free | <ul><li> <p> JSONPath: $.free </p> </li></ul>|
+| PBS Node: swap |<p>.</p>|Dependent item|pbs.node.swap | <ul><li> <p>JSONPath: $.swap </p> </li></ul>|
+| PBS Node: root used |<p>.</p>|Dependent item| pbs.node.root.used | <ul><li> <p> JSONPath: $.used </p> </li> </ul>|
+| PBS Node: root total |<p>.</p>|Dependent item| pbs.node.root.total | <ul><li> <p> JSONPath: $.total </p> </li></ul>|
+| PBS Node: root avail |<p>.</p>|Dependent item| pbs.node.root.avail | <ul><li> <p> JSONPath: $.avail</p> </li></ul>|
+| PBS Node: root |<p>.</p>|Dependent item| pbs.node.root | <ul><li> <p> JSONPath: $.root</p> </li></ul>|
+| PBS Node: memory used |<p>.</p>|Dependent item| pbs.node.memory.used | <ul><li> <p> JSONPath: $.used </p> </li></ul>|
+| PBS Node: memory total |<p>.</p>|Dependent item| pbs.node.memory.total | <ul><li> <p> JSONPath: $.total</p> </li></ul>|
+| PBS Node: memory free |<p>.</p>|Dependent item| pbs.node.memory.free | <ul><li> <p> JSONPath: $.free </p> </li></ul>|
+| PBS Node: memory |<p>.</p>|Dependent item| pbs.node.memory | <ul><li> <p> JSONPath: $.memory </p> </li></ul>|
+| PBS Node: kernel |<p>.</p>|Dependent item| pbs.node.kversion | <ul><li> <p> JSONPath: $.kversion </p> </li></ul>|
+| PBS Node: cpu usage |<p>.</p>|Dependent item| pbs.node.cpu | <ul><li> <p> JSONPath: $.cpu </p> </li> <li><p> Custom multiplier: 100  </p></li></ul>|
+| PBS: gc store |<p>.</p>|Dependent item| | <ul><li> <p> JSONPath: $..store.first() <p> Custom failed : Discard value </p></p> </li> </ul>|
+| PBS: gc still-bad |<p>.</p>|Dependent item| pbs.gc.still-bad | <ul><li> <p> JSONPath: $..['still-bad'].first() <p>  Custom failed : Discard value </p> </p> </li> </ul>|
+| PBS: gc schedule |<p>.</p>|Dependent item| pbs.gc.schedule | <ul><li> <p> JSONPath: $..schedule.first() <p>  Custom failed : Discard value </p> </p> </li> </ul>|
+| PBS: gc pending-bytes |<p>.</p>|Dependent item| pbs.gc.pending-bytes | <ul><li> <p> $..['pending-bytes'].first() <p>  Custom failed : Discard value </p> </p> </li> </ul>|
+| PBS: gc next-run |<p>.</p>|Dependent item| pbs.gc.next-run | <ul><li> <p> $..['next-run'].first() <p>  Custom failed : Discard value </p> </p> </li> </ul>|
+| PBS: gc disk-chunks |<p>.</p>|Dependent item| pbs.gc.disk-chunks | <ul><li> <p> $..['disk-chunks'].first() <p>  Custom failed : Discard value </p> </p> </li> </ul>|
+| PBS: gc disk-bytes |<p>.</p>|Dependent item| pbs.gc.disk-bytes | <ul><li> <p> $..['disk-bytes'].first() <p>  Custom failed : Discard value </p> </p> </li> </ul>|
+
