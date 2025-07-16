@@ -14,10 +14,17 @@ Zabbix version: 7.0 and higher.
 
 ## Proxmox Backup Server permissions
 
+Add API Token permission Audit to 
+  * /datastore,
+  * /system/status
+  * /system/tasks
+  * /remote
+  * /system
 
 
 
-### Macros used
+
+## Macros used
 
 |Name|Description|Default|
 |----|-----------|-------|
