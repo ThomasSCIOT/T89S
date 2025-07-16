@@ -101,3 +101,18 @@ Zabbix version: 7.0 and higher.
 | PBS: Prune task successfull |<p>.</p>|Calculated| pbs.prune.verify.successfull | <p> sum(last_foreach(//pbs.prune.last-run-state[*])) </p> |
 | PBS Node: swap used percent |<p>.</p>|Calculated| pbs.node.swap.pused | <p> last(//pbs.node.swap.used) / last(//pbs.node.swap.total) * 100 </p> |
 | PBS Node: root used percent |<p>.</p>|Calculated| pbs.node.root.pused | <p>last(//pbs.node.root.used) / last(//pbs.node.root.total) * 100 </p> |
+
+
+### Triggers
+
+|Name|Description|Expression|Severity|Dependencies|
+|----|-----------|----------|--------|--------------------------------|
+|<p>Users has changed</p>||`last(/Proxmox Backup Server by HTTP/pbs.users.count) <> last(/Proxmox Backup Server by HTTP/pbs.users.count,#2) `| High |
+|<p>PBS: Node high swap usage</p>||`last(/Proxmox Backup Server by HTTP/pbs.node.swap.pused)>{$PBS.SWAP.PUSE.MAX.WARN} `| Average |
+|<p>PBS: Node high root usage</p>||` last(/Proxmox Backup Server by HTTP/pbs.node.root.pused)>{$PBS.ROOT.PUSE.MAX.WARN} `| Average |
+|<p>PBS: Node high memory usage</p>||`last(/Proxmox Backup Server by HTTP/pbs.node.memory.pused)>{$PBS.MEMORY.PUSE.MAX.WARN} `| Average |
+|<p>PBS: Node high cpu usage</p>||`last(/Proxmox Backup Server by HTTP/pbs.node.cpu)>{$PBS.CPU.PUSE.MAX.WARN} `| Average |
+|<p>PBS: API service not available</p>||`last(/Proxmox Backup Server by HTTP/pbs.ping)<>1 `| Disaster |
+|<p>New sync failed tasks</p>||` last(/Proxmox Backup Server by HTTP/pbs.tasks.failed.syncjob) > 1 `| Disaster |
+|<p>New garbage failed tasks</p>||`last(/Proxmox Backup Server by HTTP/pbs.tasks.failed.garbage_collection) > 1 `| Disaster |
+|<p>New backup failed tasks</p>||` last(/Proxmox Backup Server by HTTP/pbs.tasks.failed.backup) > 1`| Disaster |
