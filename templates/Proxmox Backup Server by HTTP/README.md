@@ -205,4 +205,34 @@ Zabbix version: 7.0 and higher.
 
 
 
+### LLD rule PBS verify tasks discovery
+
+#### Item prototypes 
+
+|Name|Description|Type|Key and additional info| Preprocessing |
+|----|-----------|----|-----------------------|----------------|
+|Verify tasks: {#VERIFY_ID} schedule  |<p>.</p>|Dependent item|pbs.verify.schedule[{#VERIFY_ID}]   |<ul><li><p> JSONPath : $.data[?(@.id == '{#VERIFY_ID}')].schedule.first()  </p> </p> <p> Custom on failed : Discard value </p>  </li> </ul>|
+| Verify tasks: {#VERIFY_ID} store |<p>.</p>|Dependent item| pbs.verify.store[{#VERIFY_ID}]  |<ul><li><p> JSONPath : $.data[?(@.id == '{#VERIFY_ID}')].store.first()  </p> </p> <p> Custom on failed : Discard value </p>  </li> </ul>|
+| Verify tasks: {#VERIFY_ID} last run endtime |<p>.</p>|Dependent item| pbs.verify.last-run-endtime[{#VERIFY_ID}]  |<ul><li><p> JSONPath : $.data[?(@.id == '{#VERIFY_ID}')].['last-run-endtime'].first()  </p> </p> <p> Custom on failed : Discard value </p>  </li> </ul>|
+| Verify tasks: {#VERIFY_ID} last run state |<p>.</p>|Dependent item| pbs.verify.last-run-state[{#VERIFY_ID}]  |<ul><li><p> JSONPath $.data[?(@.id == '{#VERIFY_ID}')].['last-run-state'].first() <p> Custom Failed : Discard value   </p> </p>   </li> <li><p> Regular Expression `^(?!OK$).*`  `0` </p> <p> Custom failed : Set to value 1 </p> </li> </ul>|
+| Verify tasks: {#VERIFY_ID} next run |<p>.</p>|Dependent item|pbs.verify.next-run[{#VERIFY_ID}]   |<ul><li><p> JSONPath : $.data[?(@.id == '{#VERIFY_ID}')].['next-run'].first()  </p> </p> <p> Custom on failed : Discard value </p>  </li> </ul>|
+| Verify tasks: {#VERIFY_ID} ns |<p>.</p>|Dependent item| pbs.verify.ns[{#VERIFY_ID}]  |<ul><li><p> JSONPath : $.data[?(@.id == '{#VERIFY_ID}')].ns.first()  </p> </p> <p> Custom on failed : Discard value </p>  </li> </ul>|
+|  Verify tasks: {#VERIFY_ID} outdated-after|<p>.</p>|Dependent item| pbs.verify.outdated-after[{#VERIFY_ID}]  |<ul><li><p> JSONPath :  $.data[?(@.id == '{#VERIFY_ID}')].['outdated-after'].first() </p> </p> <p> Custom on failed : Discard value </p>  </li> </ul>|
+
+
+### Trigger prototypes
+
+|Name|Description|Expression|Severity|Dependencies|
+|----|-----------|----------|--------|--------------------------------|
+| Verify tasks: {#VERIFY_ID} last run endtime > 24h| |`fuzzytime(/Proxmox Backup Server by HTTP/pbs.verify.last-run-endtime[{#VERIFY_ID}],90000s) = 0 and last(/Proxmox Backup Server by HTTP/pbs.verify.last-run-state[{#VERIFY_ID}]) <> 0 `| Warning |  |
+| Verify tasks: {#VERIFY_ID} last run failed | |` last(/Proxmox Backup Server by HTTP/pbs.verify.last-run-state[{#VERIFY_ID}]) <> 1 and last(/Proxmox Backup Server by HTTP/pbs.verify.last-run-endtime[{#VERIFY_ID}]) <> 0`| Average |  |
+| Verify tasks: {#VERIFY_ID} ns has changed | |` last(/Proxmox Backup Server by HTTP/pbs.verify.ns[{#VERIFY_ID}]) <> last(/Proxmox Backup Server by HTTP/pbs.verify.ns[{#VERIFY_ID}],#2)`| Warning |  |
+| Verify tasks: {#VERIFY_ID} schedule has changed | |`last(/Proxmox Backup Server by HTTP/pbs.verify.schedule[{#VERIFY_ID}]) <> last(/Proxmox Backup Server by HTTP/pbs.verify.schedule[{#VERIFY_ID}],#2) `| Warning |  |
+| Verify tasks: {#VERIFY_ID} store has changed | |` last(/Proxmox Backup Server by HTTP/pbs.verify.store[{#VERIFY_ID}]) <> last(/Proxmox Backup Server by HTTP/pbs.verify.store[{#VERIFY_ID}],#2)`| Warning |  |
+
+
+
+
+
+
 
