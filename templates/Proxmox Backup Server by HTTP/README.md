@@ -93,4 +93,11 @@ Zabbix version: 7.0 and higher.
 | PBS: gc next-run |<p>.</p>|Dependent item| pbs.gc.next-run | <ul><li> <p> $..['next-run'].first() <p>  Custom failed : Discard value </p> </p> </li> </ul>|
 | PBS: gc disk-chunks |<p>.</p>|Dependent item| pbs.gc.disk-chunks | <ul><li> <p> $..['disk-chunks'].first() <p>  Custom failed : Discard value </p> </p> </li> </ul>|
 | PBS: gc disk-bytes |<p>.</p>|Dependent item| pbs.gc.disk-bytes | <ul><li> <p> $..['disk-bytes'].first() <p>  Custom failed : Discard value </p> </p> </li> </ul>|
-
+| PBS: Verify task successfull % |<p>.</p>|Calculated| pbs.tasks.verify.successfull.percent | <p>(last(//pbs.tasks.verify.successfull) * 100) / last(//pbs.tasks.verify.count) </p> |
+| PBS: Verify task successfull |<p>.</p>|Calculated| pbs.tasks.verify.successfull | <p> sum(last_foreach(//pbs.verify.last-run-state[*])) </p> |
+| PBS: sync task successfull % |<p>.</p>|Calculated| pbs.tasks.sync.successfull.percent | <p> (last(//pbs.sync.verify.successfull)*100) / last(//pbs.tasks.sync.count) </p> |
+| PBS: Prune task successfull % |<p>.</p>|Calculated| pbs.tasks.prune.successfull.percent | <p>(last(//pbs.prune.verify.successfull)*100) / last(//pbs.prune.count) </p> |
+| PBS: Sync task successfull |<p>.</p>|Calculated| pbs.sync.verify.successfull | <p> sum(last_foreach(//pbs.sync.last-run-state[*])) </p> |
+| PBS: Prune task successfull |<p>.</p>|Calculated| pbs.prune.verify.successfull | <p> sum(last_foreach(//pbs.prune.last-run-state[*])) </p> |
+| PBS Node: swap used percent |<p>.</p>|Calculated| pbs.node.swap.pused | <p> last(//pbs.node.swap.used) / last(//pbs.node.swap.total) * 100 </p> |
+| PBS Node: root used percent |<p>.</p>|Calculated| pbs.node.root.pused | <p>last(//pbs.node.root.used) / last(//pbs.node.root.total) * 100 </p> |
