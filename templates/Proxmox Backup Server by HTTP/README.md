@@ -182,6 +182,24 @@ Zabbix version: 7.0 and higher.
 
 
 
+### LLD rule PBS Users discovery
+
+#### Item prototypes 
+
+|Name|Description|Type|Key and additional info| Preprocessing |
+|----|-----------|----|-----------------------|----------------|
+| PBS: user {#PBS_USERID} status |<p>.</p>|Dependent item| pbs.user.enable[{#PBS_USERID}]   |<ul><li><p> JSONPath : $.data[?(@.userid == '{#PBS_USERID}')].enable.first()  </p> </p> <p> Boolean to decimal </p>   </li> </ul>|
+| PBS: user {#PBS_USERID} is expires |<p>.</p>|Dependent item| pbs.user.status[{#PBS_USERID}]   |<ul><li><p> JSONPath : $.data[?(@.userid == '{#PBS_USERID}')].expire.first()  </p> <p> Boolean to decimal </p>   </li> </ul>|
+
+
+### Trigger prototypes
+
+|Name|Description|Expression|Severity|Dependencies|
+|----|-----------|----------|--------|--------------------------------|
+|last(/Proxmox Backup Server by HTTP/pbs.user.enable[{#PBS_USERID}]) = 0||` PBS: user {#PBS_USERID} is disable`|Warning ||
+
+
+
 
 
 
