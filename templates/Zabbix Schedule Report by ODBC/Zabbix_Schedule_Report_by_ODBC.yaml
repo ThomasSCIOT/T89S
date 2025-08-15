@@ -1,0 +1,160 @@
+zabbix_export:
+  version: '7.0'
+  template_groups:
+    - uuid: 7df96b18c230490a9a0a9e2307226338
+      name: Templates
+  templates:
+    - uuid: fe77cad8e2224dddbb566cc9954d9453
+      template: 'Zabbix Schedule Report by ODBC'
+      name: 'Zabbix Schedule Report by ODBC'
+      groups:
+        - name: Templates
+      items:
+        - uuid: 712a0b111ee5472aaf40e429803118e9
+          name: 'Get Report'
+          type: ODBC
+          key: 'db.odbc.get[report,{$DSN}]'
+          delay: 15m
+          history: '0'
+          value_type: TEXT
+          trends: '0'
+          params: 'SELECT * FROM report;'
+          tags:
+            - tag: component
+              value: raw
+      discovery_rules:
+        - uuid: 4d7deac2147543ac9d7d76a9eae4304b
+          name: 'Zabbix Report Discovery'
+          type: DEPENDENT
+          key: zabbix.report.discovery
+          delay: '0'
+          item_prototypes:
+            - uuid: 01d9bed2d7564660a6dbedeea957d999
+              name: 'Zabbix Report active since : {#REPORT_NAME}'
+              type: DEPENDENT
+              key: 'zabbix.report.active_since[{#REPORT_ID}]'
+              delay: '0'
+              units: unixtime
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$[?(@.reportid == {#REPORT_ID})].active_since.first()'
+                - type: DISCARD_UNCHANGED_HEARTBEAT
+                  parameters:
+                    - 12h
+              master_item:
+                key: 'db.odbc.get[report,{$DSN}]'
+              tags:
+                - tag: component
+                  value: 'zabbix report'
+                - tag: 'zabbix report'
+                  value: '{#REPORT_NAME}'
+            - uuid: 937cc25374dc4e499e2c97c0715a100e
+              name: 'Zabbix Report end date : {#REPORT_NAME}'
+              type: DEPENDENT
+              key: 'zabbix.report.active_till[{#REPORT_ID}]'
+              delay: '0'
+              units: unixtime
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$[?(@.reportid == {#REPORT_ID})].active_till.first()'
+                - type: DISCARD_UNCHANGED_HEARTBEAT
+                  parameters:
+                    - 12h
+              master_item:
+                key: 'db.odbc.get[report,{$DSN}]'
+              tags:
+                - tag: component
+                  value: 'zabbix report'
+                - tag: 'zabbix report'
+                  value: '{#REPORT_NAME}'
+              trigger_prototypes:
+                - uuid: 580dbe8832354f3ebacfeb07b3f4db13
+                  expression: 'now() - last(/Zabbix Schedule Report by ODBC/zabbix.report.active_till[{#REPORT_ID}]) > 0'
+                  name: 'Zabbix Report expires : {#REPORT_NAME}'
+                  priority: WARNING
+                  manual_close: 'YES'
+            - uuid: 27ee549b5d794c46af4eadf98c2c5592
+              name: 'Zabbix Report info : {#REPORT_NAME}'
+              type: DEPENDENT
+              key: 'zabbix.report.info[{#REPORT_ID}]'
+              delay: '0'
+              value_type: CHAR
+              trends: '0'
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$[?(@.reportid == {#REPORT_ID})].info.first()'
+                - type: DISCARD_UNCHANGED_HEARTBEAT
+                  parameters:
+                    - 12h
+              master_item:
+                key: 'db.odbc.get[report,{$DSN}]'
+              tags:
+                - tag: component
+                  value: 'zabbix report'
+                - tag: 'zabbix report'
+                  value: '{#REPORT_NAME}'
+            - uuid: 1b79195feecd4fc797860a46a9b45d4e
+              name: 'Zabbix Report last sent : {#REPORT_NAME}'
+              type: DEPENDENT
+              key: 'zabbix.report.lastsent[{#REPORT_ID}]'
+              delay: '0'
+              units: unixtime
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$[?(@.reportid == {#REPORT_ID})].lastsent.first()'
+                - type: DISCARD_UNCHANGED_HEARTBEAT
+                  parameters:
+                    - 12h
+              master_item:
+                key: 'db.odbc.get[report,{$DSN}]'
+              tags:
+                - tag: component
+                  value: 'zabbix report'
+                - tag: 'zabbix report'
+                  value: '{#REPORT_NAME}'
+            - uuid: f499c86e04b4409798bef68662be9ddd
+              name: 'Zabbix Report state : {#REPORT_NAME}'
+              type: DEPENDENT
+              key: 'zabbix.report[{#REPORT_ID}]'
+              delay: '0'
+              valuemap:
+                name: 'report state'
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$[?(@.reportid == {#REPORT_ID})].state.first()'
+              master_item:
+                key: 'db.odbc.get[report,{$DSN}]'
+              tags:
+                - tag: component
+                  value: 'zabbix report'
+                - tag: 'zabbix report'
+                  value: '{#REPORT_NAME}'
+              trigger_prototypes:
+                - uuid: aae7714c5c0b4d8cabeed1ca2bd77a4c
+                  expression: 'last(/Zabbix Schedule Report by ODBC/zabbix.report[{#REPORT_ID}]) <> 1'
+                  name: 'Zabbix Report state failed : {#REPORT_NAME}'
+                  priority: DISASTER
+                  manual_close: 'YES'
+          master_item:
+            key: 'db.odbc.get[report,{$DSN}]'
+          lld_macro_paths:
+            - lld_macro: '{#REPORT_ID}'
+              path: $..reportid.first()
+            - lld_macro: '{#REPORT_NAME}'
+              path: $..name.first()
+      macros:
+        - macro: '{$DATABASE_NAME}'
+        - macro: '{$DSN}'
+      valuemaps:
+        - uuid: 8e6470c449354450b4cf296cba7bce42
+          name: 'report state'
+          mappings:
+            - value: '1'
+              newvalue: OK
+            - value: '2'
+              newvalue: Error
