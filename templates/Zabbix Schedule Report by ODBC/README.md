@@ -12,7 +12,7 @@ Zabbix version: 7.0 and higher.
 
 ## Configuration
 
-## ODBC
+### ODBC (MariaDB)
 
 => https://www.zabbix.com/documentation/current/en/manual/config/items/itemtypes/odbc_checks
 
@@ -38,7 +38,10 @@ Port        = 3306
 Database    = zabbix
 ```
 
+### User
 
+To ensure proper functionality, it is essential to create a dedicated user specifically for accessing the Zabbix database. 
+This user must have read permissions on the report table to retrieve the necessary data. 
 
 ## Macros used
 
@@ -48,16 +51,16 @@ Database    = zabbix
 | {$DSN} |  |  | 
 
 
-### Items
+## Items
 
 |Name|Description|Type|Key and additional info| Preprocessing / Formula |
 |----|-----------|----|-----------------------|-------------------------|
 | Get Report |<p>.</p>| Database monitor |  |
 
 
-### Schedule Discovery
+## Schedule Discovery
 
-#### Item prototypes 
+### Item prototypes 
 
 |Name|Description|Type|Key and additional info| Preprocessing |
 |----|-----------|----|-----------------------|----------------|
