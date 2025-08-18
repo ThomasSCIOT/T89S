@@ -14,7 +14,7 @@ zabbix_export:
           name: 'Get Report'
           type: HTTP_AGENT
           key: zabbix.get.report
-          history: 1h
+          history: '0'
           value_type: TEXT
           trends: '0'
           preprocessing:
@@ -42,6 +42,12 @@ zabbix_export:
           tags:
             - tag: component
               value: raw
+          triggers:
+            - uuid: e3c87eae84224d4385e389c73c0be5f2
+              expression: 'last(/Zabbix Schedule Report by HTTP/zabbix.get.report) = "error"'
+              name: 'Failed to get schedule report'
+              priority: HIGH
+              manual_close: 'YES'
       discovery_rules:
         - uuid: a452622a034948eab9315ab88c6dab7b
           name: 'Zabbix Report Discovery'
