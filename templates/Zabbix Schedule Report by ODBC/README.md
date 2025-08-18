@@ -69,11 +69,12 @@ This user must have read permissions on the report table to retrieve the necessa
 | Zabbix Report info : {#REPORT_NAME} | <p>.</p> | Dependent item|zabbix.report.info[{#REPORT_ID}] |   <ul><li><p> JSONPath: $[?(@.reportid == {#REPORT_ID})].info.first()</p></li>  <li><p>Discard unchanged with heartbeat: 12h   </p> </li> </ul>|
 | Zabbix Report last sent : {#REPORT_NAME} | <p>.</p> | Dependent item|zabbix.report.lastsent[{#REPORT_ID}] |  <ul><li><p> JSONPath: $[?(@.reportid == {#REPORT_ID})].lastsent.first()</p></li>  <li><p>Discard unchanged with heartbeat: 12h   </p> </li> </ul>|
 | Zabbix Report state : {#REPORT_NAME} | <p>.</p> | Dependent item|zabbix.report[{#REPORT_ID}] |  <ul><li><p> JSONPath: $[?(@.reportid == {#REPORT_ID})].state.first()</p></li>  <li><p>Discard unchanged with heartbeat: 12h   </p> </li> </ul>|
+| Zabbix Report status : {#REPORT_NAME} | <p>.</p> | Dependent item|zabbix.status[{#REPORT_ID}] |  <ul><li><p> JSONPath: $[?(@.reportid == {#REPORT_ID})].status.first()</p></li>  <li><p>Discard unchanged with heartbeat: 12h   </p> </li> </ul>|
 
 ### Trigger prototypes
 
 |Name|Description|Expression|Severity|Dependencies|
 |----|-----------|----------|--------|--------------------------------|
-|Zabbix Report expires : {#REPORT_NAME} ||`now() - last(/Zabbix Schedule Report by ODBC/zabbix.report.active_till[{#REPORT_ID}]) > 0`|Warning ||
-|Zabbix Report state failed : {#REPORT_NAME} ||`last(/Zabbix Schedule Report by ODBC/zabbix.report[{#REPORT_ID}]) <> 1`|Disaster ||
+|Zabbix Report expires : {#REPORT_NAME} ||`now() - last(/Zabbix Schedule Report by ODBC/zabbix.report.active_till[{#REPORT_ID}]) > 0 and last(/Zabbix Schedule Report by ODBC/zabbix.status[{#REPORT_ID}]) = 0`|Warning ||
+|Zabbix Report state failed : {#REPORT_NAME} ||`last(/Zabbix Schedule Report by ODBC/zabbix.report[{#REPORT_ID}]) <> 1 and last(/Zabbix Schedule Report by ODBC/zabbix.status[{#REPORT_ID}]) = 0`|Disaster ||
 
