@@ -1,0 +1,214 @@
+zabbix_export:
+  version: '7.0'
+  template_groups:
+    - uuid: 7df96b18c230490a9a0a9e2307226338
+      name: Templates
+  templates:
+    - uuid: 44e7492e4a84402e8b7e4f55641a702d
+      template: 'Zabbix Schedule Report by HTTP'
+      name: 'Zabbix Schedule Report by HTTP'
+      groups:
+        - name: Templates
+      items:
+        - uuid: 09fcc8166df64885bd71c8aa82d805ad
+          name: 'Get Report'
+          type: HTTP_AGENT
+          key: zabbix.get.report
+          history: 1h
+          value_type: TEXT
+          trends: '0'
+          preprocessing:
+            - type: CHECK_NOT_SUPPORTED
+              parameters:
+                - '-1'
+              error_handler: CUSTOM_VALUE
+              error_handler_params: error
+          timeout: 10s
+          url: '{$ZABBIX_URL}'
+          post_type: JSON
+          posts: |
+            {
+                "jsonrpc": "2.0",
+                "method": "report.get",
+                "params": {
+                    "output": "extend"
+                },
+                "auth": "{$ZABBIX_TOKEN}",
+                "id": 1
+            }
+          headers:
+            - name: Content-Type
+              value: application/json
+          tags:
+            - tag: component
+              value: raw
+      discovery_rules:
+        - uuid: a452622a034948eab9315ab88c6dab7b
+          name: 'Zabbix Report Discovery'
+          type: DEPENDENT
+          key: zabbix.report.discovery
+          delay: '0'
+          item_prototypes:
+            - uuid: c59d28e4212e4bdbaecb450c595e678b
+              name: 'Zabbix Report active since : {#REPORT_NAME}'
+              type: DEPENDENT
+              key: 'zabbix.report.active_since[{#REPORT_ID}]'
+              delay: '0'
+              history: 7d
+              value_type: CHAR
+              trends: '0'
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$..[?(@.reportid == {#REPORT_ID})].active_since.first()'
+                - type: DISCARD_UNCHANGED_HEARTBEAT
+                  parameters:
+                    - 12h
+              master_item:
+                key: zabbix.get.report
+              tags:
+                - tag: component
+                  value: 'zabbix report'
+                - tag: 'zabbix report'
+                  value: '{#REPORT_NAME}'
+            - uuid: 782416343c27401b92ae006fb023eaff
+              name: 'Zabbix Report end date : {#REPORT_NAME}'
+              type: DEPENDENT
+              key: 'zabbix.report.active_till[{#REPORT_ID}]'
+              delay: '0'
+              history: 7d
+              value_type: CHAR
+              trends: '0'
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$..[?(@.reportid == {#REPORT_ID})].active_till.first()'
+                - type: DISCARD_UNCHANGED_HEARTBEAT
+                  parameters:
+                    - 12h
+              master_item:
+                key: zabbix.get.report
+              tags:
+                - tag: component
+                  value: 'zabbix report'
+                - tag: 'zabbix report'
+                  value: '{#REPORT_NAME}'
+            - uuid: 1f2c44c5d1614415814af74494fe6fbf
+              name: 'Zabbix Report info : {#REPORT_NAME}'
+              type: DEPENDENT
+              key: 'zabbix.report.info[{#REPORT_ID}]'
+              delay: '0'
+              history: 7d
+              value_type: CHAR
+              trends: '0'
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$..[?(@.reportid == {#REPORT_ID})].info.first()'
+                - type: DISCARD_UNCHANGED_HEARTBEAT
+                  parameters:
+                    - 12h
+              master_item:
+                key: zabbix.get.report
+              tags:
+                - tag: component
+                  value: 'zabbix report'
+                - tag: 'zabbix report'
+                  value: '{#REPORT_NAME}'
+            - uuid: d64bf69c7ad244d2978364ae4d6b5a0c
+              name: 'Zabbix Report last sent : {#REPORT_NAME}'
+              type: DEPENDENT
+              key: 'zabbix.report.lastsent[{#REPORT_ID}]'
+              delay: '0'
+              history: 7d
+              trends: '0'
+              units: unixtime
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$..[?(@.reportid == {#REPORT_ID})].lastsent.first()'
+                - type: DISCARD_UNCHANGED_HEARTBEAT
+                  parameters:
+                    - 12h
+              master_item:
+                key: zabbix.get.report
+              tags:
+                - tag: component
+                  value: 'zabbix report'
+                - tag: 'zabbix report'
+                  value: '{#REPORT_NAME}'
+            - uuid: 0f295f8b04a34a34b0dd3d6e096e1c66
+              name: 'Zabbix Report state : {#REPORT_NAME}'
+              type: DEPENDENT
+              key: 'zabbix.report[{#REPORT_ID}]'
+              delay: '0'
+              history: 7d
+              valuemap:
+                name: 'report state'
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$..[?(@.reportid == {#REPORT_ID})].state.first()'
+                - type: DISCARD_UNCHANGED_HEARTBEAT
+                  parameters:
+                    - 12h
+              master_item:
+                key: zabbix.get.report
+              tags:
+                - tag: component
+                  value: 'zabbix report'
+                - tag: 'zabbix report'
+                  value: '{#REPORT_NAME}'
+            - uuid: 46230e3f742b4ab8ae0c14ca0cf0a1f6
+              name: 'Zabbix Report status :{#REPORT_NAME}'
+              type: DEPENDENT
+              key: 'zabbix.status[{#REPORT_ID}]'
+              delay: '0'
+              history: 7d
+              valuemap:
+                name: 'report status'
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$..[?(@.reportid == {#REPORT_ID})].status.first()'
+                - type: DISCARD_UNCHANGED_HEARTBEAT
+                  parameters:
+                    - 12h
+              master_item:
+                key: zabbix.get.report
+              tags:
+                - tag: component
+                  value: 'zabbix report'
+                - tag: 'zabbix report'
+                  value: '{#REPORT_NAME}'
+          master_item:
+            key: zabbix.get.report
+          lld_macro_paths:
+            - lld_macro: '{#REPORT_ID}'
+              path: $.reportid
+            - lld_macro: '{#REPORT_NAME}'
+              path: $.name
+            - lld_macro: '{#REPORT_STATUS}'
+              path: $.status
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.result
+      macros:
+        - macro: '{$ZABBIX_TOKEN}'
+        - macro: '{$ZABBIX_URL}'
+      valuemaps:
+        - uuid: 4219dc15abb3429883fbf06c9d81cbd3
+          name: 'report state'
+          mappings:
+            - value: '1'
+              newvalue: OK
+            - value: '2'
+              newvalue: Error
+        - uuid: d01b0bfc00864c5c86de832ad12fbcda
+          name: 'report status'
+          mappings:
+            - value: '1'
+              newvalue: Disable
+            - value: '0'
+              newvalue: Enable
