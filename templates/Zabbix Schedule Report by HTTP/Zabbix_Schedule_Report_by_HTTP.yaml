@@ -55,12 +55,27 @@ zabbix_export:
               key: 'zabbix.report.active_since[{#REPORT_ID}]'
               delay: '0'
               history: 7d
-              value_type: CHAR
               trends: '0'
+              units: unixtime
               preprocessing:
                 - type: JSONPATH
                   parameters:
                     - '$..[?(@.reportid == {#REPORT_ID})].active_since.first()'
+                - type: JAVASCRIPT
+                  parameters:
+                    - |
+                      function convertToUnixTime(dateString) {
+                          const date = new Date(dateString);
+                          if (isNaN(date.getTime())) {
+                              throw new Error("Date invalide");
+                          }
+                          
+                          return Math.floor(date.getTime() / 1000);
+                      
+                      }
+                      
+                      return convertToUnixTime(value);
+                      
                 - type: DISCARD_UNCHANGED_HEARTBEAT
                   parameters:
                     - 12h
@@ -77,12 +92,27 @@ zabbix_export:
               key: 'zabbix.report.active_till[{#REPORT_ID}]'
               delay: '0'
               history: 7d
-              value_type: CHAR
               trends: '0'
+              units: unixtime
               preprocessing:
                 - type: JSONPATH
                   parameters:
                     - '$..[?(@.reportid == {#REPORT_ID})].active_till.first()'
+                - type: JAVASCRIPT
+                  parameters:
+                    - |
+                      function convertToUnixTime(dateString) {
+                          const date = new Date(dateString);
+                          if (isNaN(date.getTime())) {
+                              throw new Error("Date invalide");
+                          }
+                          
+                          return Math.floor(date.getTime() / 1000);
+                      
+                      }
+                      
+                      return convertToUnixTime(value);
+                      
                 - type: DISCARD_UNCHANGED_HEARTBEAT
                   parameters:
                     - 12h
@@ -181,6 +211,17 @@ zabbix_export:
                   value: 'zabbix report'
                 - tag: 'zabbix report'
                   value: '{#REPORT_NAME}'
+          trigger_prototypes:
+            - uuid: a7b45a6bf7f54366afb0fec4d646f7ca
+              expression: 'now() - last(/Zabbix Schedule Report by HTTP/zabbix.report.active_till[{#REPORT_ID}]) > 0 and last(/Zabbix Schedule Report by HTTP/zabbix.status[{#REPORT_ID}]) = 0'
+              name: 'Zabbix Report expires : {#REPORT_NAME}'
+              priority: WARNING
+              manual_close: 'YES'
+            - uuid: a27df5cff34440cab5aa962d34c3e5d1
+              expression: 'last(/Zabbix Schedule Report by HTTP/zabbix.report[{#REPORT_ID}]) <> 1 and last(/Zabbix Schedule Report by HTTP/zabbix.status[{#REPORT_ID}]) = 0'
+              name: 'Zabbix Report state failed : {#REPORT_NAME}'
+              priority: DISASTER
+              manual_close: 'YES'
           master_item:
             key: zabbix.get.report
           lld_macro_paths:
