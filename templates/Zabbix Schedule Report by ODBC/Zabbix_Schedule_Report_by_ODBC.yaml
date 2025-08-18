@@ -69,12 +69,6 @@ zabbix_export:
                   value: 'zabbix report'
                 - tag: 'zabbix report'
                   value: '{#REPORT_NAME}'
-              trigger_prototypes:
-                - uuid: 580dbe8832354f3ebacfeb07b3f4db13
-                  expression: 'now() - last(/Zabbix Schedule Report by ODBC/zabbix.report.active_till[{#REPORT_ID}]) > 0'
-                  name: 'Zabbix Report expires : {#REPORT_NAME}'
-                  priority: WARNING
-                  manual_close: 'YES'
             - uuid: 27ee549b5d794c46af4eadf98c2c5592
               name: 'Zabbix Report info : {#REPORT_NAME}'
               type: DEPENDENT
@@ -134,12 +128,35 @@ zabbix_export:
                   value: 'zabbix report'
                 - tag: 'zabbix report'
                   value: '{#REPORT_NAME}'
-              trigger_prototypes:
-                - uuid: aae7714c5c0b4d8cabeed1ca2bd77a4c
-                  expression: 'last(/Zabbix Schedule Report by ODBC/zabbix.report[{#REPORT_ID}]) <> 1'
-                  name: 'Zabbix Report state failed : {#REPORT_NAME}'
-                  priority: DISASTER
-                  manual_close: 'YES'
+            - uuid: ad92d8248f51470c9414b9921bf10c2b
+              name: 'Zabbix Report status : {#REPORT_NAME}'
+              type: DEPENDENT
+              key: 'zabbix.status[{#REPORT_ID}]'
+              delay: '0'
+              valuemap:
+                name: 'report status'
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$[?(@.reportid == {#REPORT_ID})].status.first()'
+              master_item:
+                key: 'db.odbc.get[report,{$DSN}]'
+              tags:
+                - tag: component
+                  value: 'zabbix report'
+                - tag: 'zabbix report'
+                  value: '{#REPORT_NAME}'
+          trigger_prototypes:
+            - uuid: 580dbe8832354f3ebacfeb07b3f4db13
+              expression: 'now() - last(/Zabbix Schedule Report by ODBC/zabbix.report.active_till[{#REPORT_ID}]) > 0 and last(/Zabbix Schedule Report by ODBC/zabbix.status[{#REPORT_ID}]) = 0'
+              name: 'Zabbix Report expires : {#REPORT_NAME}'
+              priority: WARNING
+              manual_close: 'YES'
+            - uuid: aae7714c5c0b4d8cabeed1ca2bd77a4c
+              expression: 'last(/Zabbix Schedule Report by ODBC/zabbix.report[{#REPORT_ID}]) <> 1 and last(/Zabbix Schedule Report by ODBC/zabbix.status[{#REPORT_ID}]) = 0'
+              name: 'Zabbix Report state failed : {#REPORT_NAME}'
+              priority: DISASTER
+              manual_close: 'YES'
           master_item:
             key: 'db.odbc.get[report,{$DSN}]'
           lld_macro_paths:
@@ -147,6 +164,8 @@ zabbix_export:
               path: $..reportid.first()
             - lld_macro: '{#REPORT_NAME}'
               path: $..name.first()
+            - lld_macro: '{#REPORT_STATUS}'
+              path: $..status.first()
       macros:
         - macro: '{$DATABASE_NAME}'
         - macro: '{$DSN}'
@@ -158,3 +177,10 @@ zabbix_export:
               newvalue: OK
             - value: '2'
               newvalue: Error
+        - uuid: 0b7782594c814156b85a24a6f486d490
+          name: 'report status'
+          mappings:
+            - value: '1'
+              newvalue: Disable
+            - value: '0'
+              newvalue: Enable
