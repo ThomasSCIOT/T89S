@@ -14,6 +14,7 @@ zabbix_export:
           name: 'Get Report'
           type: HTTP_AGENT
           key: zabbix.get.report
+          delay: 15m
           history: '0'
           value_type: TEXT
           trends: '0'
