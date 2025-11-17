@@ -1,0 +1,91 @@
+zabbix_export:
+  version: '7.4'
+  media_types:
+    - name: OVH SMS Gateway (http2sms)
+      type: WEBHOOK
+      parameters:
+        - name: message
+          value: '{ALERT.MESSAGE}'
+        - name: ovh_login
+          value: '<API Login>'
+        - name: ovh_password
+          value: '<API Password>'
+        - name: ovh_service
+          value: '<SMS ID Service>'
+        - name: send_from
+          value: '0000000000'
+        - name: send_to
+          value: '{ALERT.SENDTO}'
+      script: |
+        var SMS_OVH = {
+            params: {},
+        
+            setPayload: function (recipient, message) {
+                this.params.recipient = recipient;
+                this.params.message = message;
+            },
+        
+            request: function () {
+                var response,
+                    request = new HttpRequest(),
+                    url = 'https://www.ovh.com/cgi-bin/sms/http2sms.cgi?' +
+                        'account='  + encodeURIComponent(this.params.account) + '&'+
+                        'login=' + encodeURIComponent(this.params.login) + '&' +
+                        'password=' + encodeURIComponent(this.params.password) + '&' +
+                        'from=' + encodeURIComponent(this.params.from) + '&' +
+                        'to=' + encodeURIComponent(this.params.recipient) + '&' + 
+                        'message=' + encodeURIComponent(this.params.message);
+                Zabbix.log(4, '[ SMS_OVH Webhook ] Sending request to: ' + url);
+                response = request.get(url); 
+                Zabbix.log(4, '[ SMS_OVH Webhook ] Received response with status code ' +
+                    request.getStatus() + '\n' + response);
+        
+                if (request.getStatus() < 200 || request.getStatus() >= 300) {
+                    var message = 'Request failed with status code ' + request.getStatus();
+        
+                    if (response) {
+                        message += ': ' + response;
+                    }
+        
+                    throw message + '. Check debug log for more information.';
+                }
+            }
+        };
+        
+        try {
+            var params = JSON.parse(value);
+        
+            if (!params.send_to || !params.message || !params.ovh_login || !params.ovh_password || !params.ovh_service) {
+                throw 'Required parameters are not set.';
+            }
+        
+            SMS_OVH.setPayload(params.send_to, params.message);
+            SMS_OVH.params.login = params.ovh_login;
+            SMS_OVH.params.password = params.ovh_password;
+            SMS_OVH.params.account = params.ovh_service;
+            SMS_OVH.params.from = params.send_from;
+            SMS_OVH.request();
+        
+            return 'OK';
+        }
+        catch (error) {
+            Zabbix.log(3, '[ SMS_OVH Webhook ] ERROR: ' + error);
+            throw 'Sending failed: ' + error;
+        }
+      timeout: 5s
+      message_templates:
+        - event_source: TRIGGERS
+          operation_mode: PROBLEM
+          subject: 'Problem: {EVENT.NAME}'
+          message: |
+            Problem name: {EVENT.NAME}
+            Host: {HOST.NAME}
+            Severity: {EVENT.SEVERITY}
+            Operational data: {EVENT.OPDATA}
+        - event_source: TRIGGERS
+          operation_mode: RECOVERY
+          subject: 'Resolved in {EVENT.DURATION}: {EVENT.NAME}'
+          message: |
+            Problem name: {EVENT.NAME}
+            Problem duration: {EVENT.DURATION}
+            Host: {HOST.NAME}
